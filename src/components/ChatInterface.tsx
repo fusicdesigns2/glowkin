@@ -1,0 +1,132 @@
+
+import React, { useState, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Card } from '@/components/ui/card';
+import { useChat } from '@/contexts/ChatContext';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingScreen from './LoadingScreen';
+
+export default function ChatInterface() {
+  const { currentThread, sendMessage, isLoading, getMessageCostEstimate } = useChat();
+  const { user } = useAuth();
+  const [message, setMessage] = useState('');
+  const [estimatedCost, setEstimatedCost] = useState(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom when messages update
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [currentThread?.messages]);
+
+  // Update estimated cost when message changes
+  useEffect(() => {
+    if (message.trim()) {
+      const cost = getMessageCostEstimate(message);
+      setEstimatedCost(cost);
+    } else {
+      setEstimatedCost(0);
+    }
+  }, [message, getMessageCostEstimate]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim() || !user) return;
+
+    await sendMessage(message.trim(), estimatedCost);
+    setMessage('');
+  };
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[80vh]">
+        <Card className="w-full max-w-lg p-8 text-center">
+          <h2 className="text-2xl font-bold mb-4">Join Mai Mai</h2>
+          <p className="mb-6 text-gray-700">
+            Sign in or create an account to start chatting with our AI. 
+            New users get 5 free credits!
+          </p>
+          <div className="flex justify-center gap-4">
+            <Button variant="outline" onClick={() => window.location.href = "/login"}>
+              Log in
+            </Button>
+            <Button className="bg-maiRed hover:bg-red-600" onClick={() => window.location.href = "/register"}>
+              Sign up
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <div className="flex flex-col h-[80vh]">
+      <div className="flex-grow overflow-auto p-4">
+        {currentThread?.messages && currentThread.messages.length > 0 ? (
+          <div className="space-y-4">
+            {currentThread.messages.map((msg) => (
+              <div 
+                key={msg.id} 
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div 
+                  className={`max-w-[80%] p-3 rounded-lg ${
+                    msg.role === 'user' 
+                      ? 'bg-maiRed text-white rounded-tr-none' 
+                      : 'bg-white border border-gray-200 rounded-tl-none shadow-sm'
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <div className={`text-xs mt-1 ${msg.role === 'user' ? 'text-red-100' : 'text-gray-500'}`}>
+                    {new Date(msg.timestamp).toLocaleTimeString()}
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
+            <h3 className="text-xl font-semibold mb-2">Welcome to Mai Mai!</h3>
+            <p className="mb-4">Ask me anything, and I'll do my best to help.</p>
+            <p className="text-sm">You have {user.credits} credits available</p>
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 border-t bg-white">
+        <form onSubmit={handleSendMessage} className="flex flex-col space-y-2">
+          <Textarea
+            placeholder="Ask your question..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            className="min-h-[100px] resize-none"
+          />
+          
+          <div className="flex justify-between items-center">
+            <div className="text-sm">
+              {estimatedCost > 0 && (
+                <span className={`${user.credits >= estimatedCost ? 'text-gray-500' : 'text-red-500'}`}>
+                  Estimated cost: <strong>{estimatedCost} credits</strong>
+                  {user.credits < estimatedCost && ' (insufficient credits)'}
+                </span>
+              )}
+            </div>
+            
+            <Button 
+              type="submit" 
+              className="bg-maiRed hover:bg-red-600"
+              disabled={!message.trim() || user.credits < estimatedCost}
+            >
+              Send
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
