@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -96,7 +97,7 @@ export default function ChatInterface() {
                 <div 
                   className={`max-w-[80%] p-3 rounded-lg ${
                     msg.role === 'user' 
-                      ? 'bg-maiRed text-white rounded-tr-none' 
+                      ? 'bg-maiRed/80 text-blue-500/80 rounded-tr-none' 
                       : 'bg-white border border-gray-200 rounded-tl-none shadow-sm'
                   }`}
                 >

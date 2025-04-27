@@ -96,7 +96,7 @@ export default function ThreadList() {
                           setEditableThreadId(null);
                         }
                       }}
-                      className="text-sm"
+                      className="text-sm w-48" // Adjusted width
                       autoFocus
                     />
                   ) : (
@@ -110,7 +110,7 @@ export default function ThreadList() {
                         }`}
                         onClick={() => selectThread(thread.id)}
                       >
-                        <span className="truncate">{thread.title}</span>
+                        <span className="truncate w-40">{thread.title}</span>
                       </Button>
                       <button
                         type="button"
@@ -118,7 +118,7 @@ export default function ThreadList() {
                           e.stopPropagation();
                           handleTitleClick(thread);
                         }}
-                        className="p-1 hover:bg-gray-100 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-1 hover:bg-red-500/50 hover:scale-105 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100"
                         aria-label="Edit thread title"
                       >
                         <Edit className="w-4 h-4" />
