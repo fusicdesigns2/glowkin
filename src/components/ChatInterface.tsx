@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -102,20 +101,24 @@ export default function ChatInterface() {
                       : 'bg-white border border-gray-200 rounded-tl-none shadow-sm'
                   }`}
                 >
-                  {msg.role === 'user' ? (
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                  ) : (
-                    <ReactMarkdown 
-                      className="prose prose-sm max-w-none" 
-                      components={{
-                        p: ({node, ...props}) => (
-                          <p className="my-4" {...props} />
-                        )
-                      }}
-                    >
-                      {msg.content}
-                    </ReactMarkdown>
-                  )}
+                  <ReactMarkdown 
+                    className="prose prose-sm max-w-none" 
+                    components={{
+                      p: ({node, ...props}) => (
+                        <p className="my-4" {...props} />
+                      ),
+                      img: ({node, ...props}) => (
+                        <img 
+                          {...props} 
+                          className="max-w-full rounded-lg shadow-sm" 
+                          alt={props.alt || 'Generated image'} 
+                        />
+                      )
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
+                  
                   <div className={`text-xs mt-1 flex items-center gap-2 flex-wrap ${
                     msg.role === 'user' 
                       ? 'text-black' 

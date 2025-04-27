@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
@@ -13,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json()
+    const { messages, generateImage } = await req.json()
     const openAiKey = Deno.env.get('OPENAI_API_KEY')
 
     if (!openAiKey) {
@@ -24,6 +23,44 @@ serve(async (req) => {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
+    }
+
+    if (generateImage) {
+      console.log('Generating image with prompt:', messages[messages.length - 1].content);
+      
+      const response = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: "dall-e-3",
+          prompt: messages[messages.length - 1].content,
+          n: 1,
+          size: "1024x1024"
+        }),
+      });
+
+      const imageData = await response.json();
+      
+      if (!response.ok) {
+        console.error('OpenAI Image API error:', imageData);
+        return new Response(JSON.stringify({ 
+          error: imageData.error?.message || 'Error generating image',
+          errorCode: imageData.error?.code || 'unknown_error' 
+        }), {
+          status: response.status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({
+        url: imageData.data[0].url,
+        model: 'image-alpha-001'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('Processing chat request with messages:', JSON.stringify(messages).substring(0, 100) + '...');

@@ -144,57 +144,126 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         0
       );
 
-      const response = await sendChatMessage(updatedThread.messages);
-      
-      if (typeof response === 'string') {
-        toast.error(response);
-        return;
-      }
-      
-      const { content: aiResponse, input_tokens, output_tokens, model } = response;
-      
-      const tenXCost = Math.ceil(estimatedCost * 10); // Calculate 10x cost
-
-      await saveMessage(
-        updatedThread.id, 
-        'assistant', 
-        aiResponse, 
-        model, 
-        input_tokens, 
-        output_tokens,
-        tenXCost // Pass 10x cost to saveMessage
-      );
-
-      const aiMessage: ChatMessage = {
-        id: `msg_${Date.now() + 1}`,
-        role: 'assistant',
-        content: aiResponse,
-        timestamp: new Date(),
-        model: model,
-        input_tokens: input_tokens,
-        output_tokens: output_tokens,
-        tenXCost // Add 10x cost to AI message
-      };
-
-      const finalThread = {
-        ...updatedThread,
-        messages: [...updatedThread.messages, aiMessage],
-        lastUpdated: new Date(),
-      };
-
-      await updateCredits(profile.credits - estimatedCost);
-      toast.success(`${estimatedCost} credits used for this response`);
-
-      setCurrentThread(finalThread);
-      setThreads(prev => {
-        const existingIndex = prev.findIndex(t => t.id === finalThread.id);
-        if (existingIndex >= 0) {
-          return prev.map(t => t.id === finalThread.id ? finalThread : t);
-        } else {
-          return [finalThread, ...prev];
+      if (isImageRequest(content)) {
+        const imageCost = await calculateImageCost();
+        if (!window.confirm(
+          `This appears to be an image generation request. Generating an image will cost ${imageCost} credits. The image will be stored for 7 days. Would you like to proceed?`
+        )) {
+          const cancelMessage: ChatMessage = {
+            id: `msg_${Date.now()}`,
+            role: 'assistant',
+            content: "Image generation was cancelled. How else can I help you?",
+            timestamp: new Date(),
+            model: 'gpt-4o-mini',
+          };
+          
+          setCurrentThread({
+            ...updatedThread,
+            messages: [...updatedThread.messages, cancelMessage],
+          });
+          setIsLoading(false);
+          return;
         }
-      });
 
+        const imageResponse = await sendChatMessage(updatedThread.messages, true);
+        
+        if (typeof imageResponse === 'string') {
+          toast.error(imageResponse);
+          return;
+        }
+
+        const { url: imageUrl, model } = imageResponse;
+
+        // Save the image to our database
+        const { data: imageData } = await supabase
+          .from('chat_images')
+          .insert({
+            message_id: userMessage.id,
+            image_url: imageUrl,
+            prompt: content
+          })
+          .select()
+          .single();
+
+        const aiMessage: ChatMessage = {
+          id: `msg_${Date.now() + 1}`,
+          role: 'assistant',
+          content: `![Generated Image](${imageUrl})\n\nHere's the image you requested. Let me know if you'd like any adjustments.`,
+          timestamp: new Date(),
+          model: model,
+          tenXCost: Math.ceil(imageCost * 10)
+        };
+
+        await saveMessage(
+          updatedThread.id,
+          'assistant',
+          aiMessage.content,
+          model,
+          0,
+          0,
+          aiMessage.tenXCost
+        );
+
+        await updateCredits(profile.credits - imageCost);
+        toast.success(`${imageCost} credits used for this image`);
+
+        setCurrentThread({
+          ...updatedThread,
+          messages: [...updatedThread.messages, aiMessage],
+        });
+
+      } else {
+        const aiResponse = await sendChatMessage(updatedThread.messages);
+        
+        if (typeof aiResponse === 'string') {
+          toast.error(aiResponse);
+          return;
+        }
+        
+        const { content: aiResponseContent, input_tokens, output_tokens, model } = aiResponse;
+        
+        const tenXCost = Math.ceil(estimatedCost * 10); // Calculate 10x cost
+
+        await saveMessage(
+          updatedThread.id, 
+          'assistant', 
+          aiResponseContent, 
+          model, 
+          input_tokens, 
+          output_tokens,
+          tenXCost // Pass 10x cost to saveMessage
+        );
+
+        const aiMessage: ChatMessage = {
+          id: `msg_${Date.now() + 1}`,
+          role: 'assistant',
+          content: aiResponseContent,
+          timestamp: new Date(),
+          model: model,
+          input_tokens: input_tokens,
+          output_tokens: output_tokens,
+          tenXCost // Add 10x cost to AI message
+        };
+
+        const finalThread = {
+          ...updatedThread,
+          messages: [...updatedThread.messages, aiMessage],
+          lastUpdated: new Date(),
+        };
+
+        await updateCredits(profile.credits - estimatedCost);
+        toast.success(`${estimatedCost} credits used for this response`);
+
+        setCurrentThread(finalThread);
+        setThreads(prev => {
+          const existingIndex = prev.findIndex(t => t.id === finalThread.id);
+          if (existingIndex >= 0) {
+            return prev.map(t => t.id === finalThread.id ? finalThread : t);
+          } else {
+            return [finalThread, ...prev];
+          }
+        });
+      }
     } catch (error) {
       console.error('Chat error:', error);
       toast.error(`Failed to get response: ${error instanceof Error ? error.message : 'Unknown error'}`);
