@@ -177,7 +177,7 @@ export default function ChatInterface() {
             </div>
           )}
         </div>
-        <div className="w-5 bg-[#0000FF]/5 gutter"></div>
+        <div className="w-[5px] bg-[#403E43]"></div>
       </div>
 
       <div className="p-4 bg-[#0000FF]/7">
