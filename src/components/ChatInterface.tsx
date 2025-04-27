@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -145,7 +144,7 @@ export default function ChatInterface() {
                     
                     <div className={`text-xs mt-1 flex items-center gap-2 flex-wrap ${
                       msg.role === 'user' 
-                        ? 'text-white/10' 
+                        ? 'text-[#403E43]/10' 
                         : 'text-gray-500'
                     }`}>
                       {msg.role === 'assistant' && (
