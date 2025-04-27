@@ -67,7 +67,9 @@ export const loadThreadsFromDB = async (userId: string): Promise<Thread[]> => {
         id: msg.id,
         role: msg.role as 'user' | 'assistant', // Type assertion to ensure compatibility
         content: msg.content,
-        timestamp: new Date(msg.created_at)
+        timestamp: new Date(msg.created_at),
+        model: msg.model,
+        tokens_used: msg.tokens_used
       })),
       lastUpdated: new Date(thread.updated_at)
     };

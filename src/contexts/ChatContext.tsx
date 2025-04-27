@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
@@ -128,14 +127,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       const response = await sendChatMessage(updatedThread.messages);
       
-      // Check if response is an error message string or a valid response object
       if (typeof response === 'string') {
-        // Handle error string response
         toast.error(response);
         return;
       }
       
-      // Now TypeScript knows response has content, tokensUsed and model properties
       const { content: aiResponse, tokensUsed, model } = response;
       
       await saveMessage(updatedThread.id, 'assistant', aiResponse, model, tokensUsed);
@@ -145,6 +141,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         role: 'assistant',
         content: aiResponse,
         timestamp: new Date(),
+        model: model,
+        tokens_used: tokensUsed
       };
 
       const finalThread = {

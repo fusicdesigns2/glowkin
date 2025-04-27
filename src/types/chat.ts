@@ -4,6 +4,8 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  model?: string;
+  tokens_used?: number;
 }
 
 export interface Thread {
