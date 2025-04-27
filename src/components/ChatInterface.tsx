@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +11,7 @@ import { ModelCost } from '@/types/chat';
 import ReactMarkdown from 'react-markdown';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useActiveModels } from '@/hooks/useActiveModels';
+import { useCostPrediction } from '@/hooks/useCostPrediction';
 
 export default function ChatInterface() {
   const { currentThread, sendMessage, isLoading, getMessageCostEstimate } = useChat();
@@ -22,8 +22,8 @@ export default function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [selectedModel, setSelectedModel] = useState<string>('');
   const { data: activeModels, isLoading: isLoadingModels } = useActiveModels();
+  const { predictedCost, predictionDate } = useCostPrediction(selectedModel, message);
 
-  // Set default model to the cheapest output model when data is loaded
   useEffect(() => {
     if (activeModels && activeModels.length > 0) {
       const cheapestModel = [...activeModels].sort((a, b) => a.out_cost - b.out_cost)[0];
@@ -68,7 +68,6 @@ export default function ChatInterface() {
     if (!message.trim() || !user || !profile) return;
     
     if (!selectedModel && activeModels && activeModels.length > 0) {
-      // Fallback to first model if somehow no model is selected
       await sendMessage(message.trim(), estimatedCost, activeModels[0].model);
     } else {
       await sendMessage(message.trim(), estimatedCost, selectedModel);
@@ -187,12 +186,22 @@ export default function ChatInterface() {
           />
           
           <div className="flex justify-between items-center">
-            <div className="text-sm">
+            <div className="text-sm space-y-1">
               {estimatedCost > 0 && (
                 <span className={`${profile && profile.credits >= estimatedCost ? 'text-gray-500' : 'text-red-500'}`}>
                   Estimated cost: <strong>{estimatedCost} credits</strong>
                   {profile && profile.credits < estimatedCost && ' (insufficient credits)'}
                 </span>
+              )}
+              {predictedCost !== null && (
+                <div className="text-gray-500 text-xs">
+                  Average cost for {selectedModel}: {predictedCost} credits
+                  {predictionDate && (
+                    <span className="ml-1">
+                      (predicted on {predictionDate.toLocaleDateString()})
+                    </span>
+                  )}
+                </div>
               )}
             </div>
             

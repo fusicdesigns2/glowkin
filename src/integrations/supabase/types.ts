@@ -54,6 +54,7 @@ export type Database = {
           input_tokens: number
           model: string
           output_tokens: number
+          predicted_cost: number | null
           role: string
           thread_id: string | null
         }
@@ -66,6 +67,7 @@ export type Database = {
           input_tokens?: number
           model: string
           output_tokens?: number
+          predicted_cost?: number | null
           role: string
           thread_id?: string | null
         }
@@ -78,6 +80,7 @@ export type Database = {
           input_tokens?: number
           model?: string
           output_tokens?: number
+          predicted_cost?: number | null
           role?: string
           thread_id?: string | null
         }
@@ -124,6 +127,10 @@ export type Database = {
           markup: number
           model: string
           out_cost: number
+          predicted_avg_in_words: number | null
+          predicted_avg_out_words: number | null
+          predicted_cost: number | null
+          prediction_date: string | null
         }
         Insert: {
           active?: boolean
@@ -133,6 +140,10 @@ export type Database = {
           markup: number
           model: string
           out_cost: number
+          predicted_avg_in_words?: number | null
+          predicted_avg_out_words?: number | null
+          predicted_cost?: number | null
+          prediction_date?: string | null
         }
         Update: {
           active?: boolean
@@ -142,6 +153,10 @@ export type Database = {
           markup?: number
           model?: string
           out_cost?: number
+          predicted_avg_in_words?: number | null
+          predicted_avg_out_words?: number | null
+          predicted_cost?: number | null
+          prediction_date?: string | null
         }
         Relationships: []
       }
