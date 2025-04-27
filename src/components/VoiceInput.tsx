@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff } from 'lucide-react';
@@ -36,7 +35,6 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
   const { user, profile } = useAuth();
   const isMobile = useIsMobile();
 
-  // Check if user has consented to transcription before
   useEffect(() => {
     const checkConsent = async () => {
       if (!user) return;
@@ -112,7 +110,6 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
     setShowMicPermission(false);
     if (granted) {
       try {
-        // Request microphone access
         await navigator.mediaDevices.getUserMedia({ audio: true });
         initiateCountdown();
       } catch (error) {
@@ -161,7 +158,6 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
           if (typeof reader.result === 'string') {
             const base64Audio = reader.result.split(',')[1];
             try {
-              // Get Whisper cost from model_costs table
               const { data: modelData, error: modelError } = await supabase
                 .from('model_costs')
                 .select('*')
@@ -183,23 +179,20 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
               if (data.text) {
                 onTranscription(data.text);
                 
-                // Log the transcription usage
-                await supabase
-                  .from('chat_messages')
-                  .insert({
-                    role: 'system',
-                    content: `Voice transcription (${secondsUsed} seconds)`,
-                    model: 'whisper-1',
-                    input_tokens: 0,
-                    output_tokens: 0,
-                    credit_cost: Math.ceil(estimatedCost)
-                  })
-                  .then(() => {
-                    // Success case handled silently
-                  })
-                  .catch(err => {
-                    console.error('Failed to log transcription usage:', err);
-                  });
+                try {
+                  await supabase
+                    .from('chat_messages')
+                    .insert({
+                      role: 'system',
+                      content: `Voice transcription (${secondsUsed} seconds)`,
+                      model: 'whisper-1',
+                      input_tokens: 0,
+                      output_tokens: 0,
+                      credit_cost: Math.ceil(estimatedCost)
+                    });
+                } catch (err) {
+                  console.error('Failed to log transcription usage:', err);
+                }
               }
             } catch (error) {
               console.error('Transcription error:', error);
@@ -218,7 +211,6 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
       mediaRecorder.current.start();
       setIsRecording(true);
       
-      // Start the recording timer
       const interval = setInterval(() => {
         setRecordingTime(prev => prev + 1000);
       }, 1000);
@@ -244,7 +236,6 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
       mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
       setIsRecording(false);
       
-      // Clear the recording timer
       if (recordingInterval) {
         clearInterval(recordingInterval);
         setRecordingInterval(null);
@@ -277,7 +268,6 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
 
   const checkConsentAndRecord = async () => {
     try {
-      // Always fetch the latest consent status from the database
       const { data, error } = await supabase
         .from('profiles')
         .select('whisper_consent')
