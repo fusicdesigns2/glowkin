@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,48 +38,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+            
+            setProfile(profile);
+          } catch (error) {
+            console.error('Error fetching profile:', error);
+          } finally {
+            setLoading(false);
+          }
+        } else {
+          setProfile(null);
+          setLoading(false);
+        }
+      }
+    );
+
+    const fetchSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const session = data.session;
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
+          
           setProfile(profile);
-        } else {
-          setProfile(null);
         }
-        
-        // Ensure loading is set to false after auth state change
+      } catch (error) {
+        console.error('Error getting session:', error);
+      } finally {
         setLoading(false);
       }
-    );
+    };
 
-    // Initialize auth state
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        // Properly handle the promise chain with proper error handling
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data }) => {
-            setProfile(data);
-            setLoading(false);
-          })
-          .catch((error) => {
-            console.error('Error fetching profile:', error);
-            setLoading(false);
-          });
-      } else {
-        setLoading(false);
-      }
-    }).catch(error => {
-      console.error('Error getting session:', error);
-      setLoading(false);
-    });
+    fetchSession();
 
     return () => {
       subscription.unsubscribe();
