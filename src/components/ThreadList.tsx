@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,7 +61,7 @@ export default function ThreadList() {
       <div className="p-4 border-b">
         <Button 
           onClick={createThread} 
-          className="w-full bg-maiRed hover:bg-red-600 text-white"
+          className="w-full bg-maiGold hover:bg-maiGold/80 text-white"
         >
           <Plus className="w-4 h-4 mr-2" /> New Chat
         </Button>
@@ -74,7 +73,32 @@ export default function ThreadList() {
             <div className="space-y-1">
               {threads.map(thread => (
                 <div key={thread.id} className="flex items-center group">
-                  {editableThreadId === thread.id ? (
+                  {editableThreadId !== thread.id ? (
+                    <div className="flex items-center justify-between w-full">
+                      <Button
+                        variant="ghost"
+                        className={`flex-grow justify-start text-left truncate ${
+                          currentThread?.id === thread.id 
+                            ? 'bg-gray-100 font-medium' 
+                            : 'hover:bg-maiRed/50'
+                        }`}
+                        onClick={() => selectThread(thread.id)}
+                      >
+                        <span className="truncate w-40">{thread.title}</span>
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTitleClick(thread);
+                        }}
+                        className="p-1 hover:bg-red-500/50 hover:scale-105 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100"
+                        aria-label="Edit thread title"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
                     <Input
                       value={editedTitle}
                       onChange={(e) => setEditedTitle(e.target.value)}
@@ -96,34 +120,9 @@ export default function ThreadList() {
                           setEditableThreadId(null);
                         }
                       }}
-                      className="text-sm w-48" // Adjusted width
+                      className="text-sm w-48"
                       autoFocus
                     />
-                  ) : (
-                    <div className="flex items-center justify-between w-full">
-                      <Button
-                        variant="ghost"
-                        className={`flex-grow justify-start text-left truncate ${
-                          currentThread?.id === thread.id 
-                            ? 'bg-gray-100 font-medium' 
-                            : ''
-                        }`}
-                        onClick={() => selectThread(thread.id)}
-                      >
-                        <span className="truncate w-40">{thread.title}</span>
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleTitleClick(thread);
-                        }}
-                        className="p-1 hover:bg-red-500/50 hover:scale-105 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100"
-                        aria-label="Edit thread title"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                    </div>
                   )}
                 </div>
               ))}

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -97,12 +96,16 @@ export default function ChatInterface() {
                 <div 
                   className={`max-w-[80%] p-3 rounded-lg ${
                     msg.role === 'user' 
-                      ? 'bg-maiRed/80 text-blue-500/80 rounded-tr-none' 
+                      ? 'bg-blue-500/20 text-black font-bold rounded-tr-none' 
                       : 'bg-white border border-gray-200 rounded-tl-none shadow-sm'
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{msg.content}</p>
-                  <div className={`text-xs mt-1 flex items-center gap-2 flex-wrap ${msg.role === 'user' ? 'text-red-100' : 'text-gray-500'}`}>
+                  <div className={`text-xs mt-1 flex items-center gap-2 flex-wrap ${
+                    msg.role === 'user' 
+                      ? 'text-black' 
+                      : 'text-gray-500'
+                  }`}>
                     {msg.role === 'assistant' && (
                       <>
                         <Badge variant="secondary" className="text-xs">
@@ -122,7 +125,7 @@ export default function ChatInterface() {
                         )}
                       </>
                     )}
-                    <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
+                    <span className="text-black">{new Date(msg.timestamp).toLocaleTimeString()}</span>
                   </div>
                 </div>
               </div>
