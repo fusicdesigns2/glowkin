@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,8 +20,16 @@ export default function ChatInterface() {
   const [estimatedCost, setEstimatedCost] = useState(0);
   const [modelCosts, setModelCosts] = useState<Record<string, ModelCost>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [selectedModel, setSelectedModel] = useState('gpt-4.1-mini-2025-04-14');
+  const [selectedModel, setSelectedModel] = useState<string>('');
   const { data: activeModels, isLoading: isLoadingModels } = useActiveModels();
+
+  // Set default model to the cheapest output model when data is loaded
+  useEffect(() => {
+    if (activeModels && activeModels.length > 0) {
+      const cheapestModel = [...activeModels].sort((a, b) => a.out_cost - b.out_cost)[0];
+      setSelectedModel(cheapestModel.model);
+    }
+  }, [activeModels]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -57,8 +66,13 @@ export default function ChatInterface() {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || !user || !profile) return;
-
-    await sendMessage(message.trim(), estimatedCost, selectedModel);
+    
+    if (!selectedModel && activeModels && activeModels.length > 0) {
+      // Fallback to first model if somehow no model is selected
+      await sendMessage(message.trim(), estimatedCost, activeModels[0].model);
+    } else {
+      await sendMessage(message.trim(), estimatedCost, selectedModel);
+    }
     setMessage('');
   };
 
@@ -203,7 +217,7 @@ export default function ChatInterface() {
               <Button 
                 type="submit" 
                 className="bg-maiRed hover:bg-red-600"
-                disabled={!message.trim() || !profile || profile.credits < estimatedCost}
+                disabled={!message.trim() || !profile || profile.credits < estimatedCost || !selectedModel}
               >
                 Send
               </Button>

@@ -14,7 +14,12 @@ export const useActiveModels = () => {
         .order('model');
 
       if (error) throw error;
-      return data as ModelCost[];
+      
+      // Convert the date string to Date object to match ModelCost type
+      return data.map(model => ({
+        ...model,
+        date: new Date(model.date)
+      })) as ModelCost[];
     }
   });
 };
