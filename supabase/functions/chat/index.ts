@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
@@ -31,15 +32,22 @@ serve(async (req) => {
       console.log('Generating image with prompt:', userPrompt);
       
       try {
-        // Enhanced prompt
-        let enhancedPrompt = userPrompt;
+        // Truncate the prompt to avoid length issues
+        const maxPromptLength = 1000; // DALL-E has a limit around 1000 chars
+        let truncatedPrompt = userPrompt.slice(0, maxPromptLength);
+        if (truncatedPrompt.length < userPrompt.length) {
+          console.log(`Original prompt was too long (${userPrompt.length} chars), truncated to ${truncatedPrompt.length} chars`);
+        }
+        
+        // Basic prompt enhancement for short prompts
+        let enhancedPrompt = truncatedPrompt;
         if (enhancedPrompt.length < 20) {
-          enhancedPrompt = `A detailed, high-quality image of ${userPrompt}`;
+          enhancedPrompt = `A detailed image of ${truncatedPrompt}`;
         }
         
         if (!enhancedPrompt.toLowerCase().includes('style') && 
             !enhancedPrompt.toLowerCase().includes('detailed')) {
-          enhancedPrompt += ". Create in a detailed, professional art style.";
+          enhancedPrompt += ". Detailed, professional style.";
         }
         
         console.log('Enhanced image prompt:', enhancedPrompt);
