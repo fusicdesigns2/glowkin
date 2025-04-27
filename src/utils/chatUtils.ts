@@ -121,7 +121,7 @@ export const saveThreadsToStorage = (userId: string, threads: Thread[]): void =>
   localStorage.setItem(`maimai_threads_${userId}`, JSON.stringify(threads));
 };
 
-export const sendChatMessage = async (messages: ChatMessage[]) => {
+export const sendChatMessage = async (messages: ChatMessage[], generateImage: boolean = false) => {
   try {
     console.log('Sending chat messages to edge function:', messages);
     
@@ -130,7 +130,8 @@ export const sendChatMessage = async (messages: ChatMessage[]) => {
         messages: messages.map(msg => ({
           role: msg.role,
           content: msg.content
-        }))
+        })),
+        generateImage
       }
     });
 
@@ -156,6 +157,10 @@ export const sendChatMessage = async (messages: ChatMessage[]) => {
 
     if (!response.data) {
       throw new Error('No data received from the chat service');
+    }
+
+    if (generateImage) {
+      return response.data;
     }
 
     if (!response.data.choices || !response.data.choices.length) {

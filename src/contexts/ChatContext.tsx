@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
 import { Thread, ChatMessage } from '@/types/chat';
 import { funFactsArray } from '@/data/funFacts';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   getMessageCostEstimate, 
   createThread,
@@ -10,6 +11,7 @@ import {
   loadThreadsFromDB,
   sendChatMessage 
 } from '@/utils/chatUtils';
+import { isImageRequest, calculateImageCost } from '@/utils/imageUtils';
 
 interface ChatContextType {
   threads: Thread[];

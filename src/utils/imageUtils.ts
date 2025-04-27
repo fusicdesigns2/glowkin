@@ -1,4 +1,6 @@
 
+import { supabase } from '@/integrations/supabase/client';
+
 const IMAGE_RELATED_KEYWORDS = [
   'image', 'picture', 'photo', 'drawing', 'illustration', 
   'generate', 'create', 'make', 'draw', 'paint',
