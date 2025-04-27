@@ -27,16 +27,17 @@ export default function ChatInterface() {
   const [estimatedCost, setEstimatedCost] = useState(0);
   const [modelCosts, setModelCosts] = useState<Record<string, ModelCost>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [selectedModel, setSelectedModel] = useState<string>('');
   const { data: activeModels, isLoading: isLoadingModels } = useActiveModels();
   const { predictedCost, predictionDate } = useCostPrediction(selectedModel, message);
+  const [selectedModelState, setSelectedModelState] = useState<string>('');
 
   useEffect(() => {
     if (activeModels && activeModels.length > 0) {
       const cheapestModel = [...activeModels].sort((a, b) => a.out_cost - b.out_cost)[0];
+      setSelectedModelState(cheapestModel.model);
       setSelectedModel(cheapestModel.model);
     }
-  }, [activeModels]);
+  }, [activeModels, setSelectedModel]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -74,16 +75,21 @@ export default function ChatInterface() {
     e.preventDefault();
     if (!message.trim() || !user || !profile) return;
     
-    if (!selectedModel && activeModels && activeModels.length > 0) {
+    if (!selectedModelState && activeModels && activeModels.length > 0) {
       await sendMessage(message.trim(), estimatedCost, activeModels[0].model);
     } else {
-      await sendMessage(message.trim(), estimatedCost, selectedModel);
+      await sendMessage(message.trim(), estimatedCost, selectedModelState);
     }
     setMessage('');
   };
 
   const handleVoiceInput = (transcription: string) => {
     setMessage(transcription);
+  };
+
+  const handleModelChange = (model: string) => {
+    setSelectedModelState(model);
+    setSelectedModel(model);
   };
 
   if (!user) {
@@ -216,7 +222,7 @@ export default function ChatInterface() {
               )}
               {predictedCost !== null && (
                 <div className="text-white/70 text-xs">
-                  Average cost for {selectedModel}: {predictedCost} credits
+                  Average cost for {selectedModelState}: {predictedCost} credits
                   {predictionDate && (
                     <span className="ml-1">
                       (predicted on {predictionDate.toLocaleDateString()})
@@ -228,8 +234,8 @@ export default function ChatInterface() {
             
             <div className="flex items-center gap-2">
               <Select
-                value={selectedModel}
-                onValueChange={setSelectedModel}
+                value={selectedModelState}
+                onValueChange={handleModelChange}
                 disabled={isLoadingModels}
               >
                 <SelectTrigger className="w-[350px] bg-white text-black border-gray-700">
@@ -247,7 +253,7 @@ export default function ChatInterface() {
               <Button 
                 type="submit" 
                 className="bg-maiRed hover:bg-red-600"
-                disabled={!message.trim() || !profile || profile.credits < estimatedCost || !selectedModel}
+                disabled={!message.trim() || !profile || profile.credits < estimatedCost || !selectedModelState}
               >
                 Send
               </Button>

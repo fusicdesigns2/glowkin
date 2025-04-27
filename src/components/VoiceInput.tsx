@@ -34,7 +34,7 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
   const audioChunks = useRef<Blob[]>([]);
   const { toast } = useToast();
   const { user, profile } = useAuth();
-  const { sendMessage } = useChat();
+  const { sendMessage, setSelectedModel } = useChat();
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -257,7 +257,7 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
         description: "Converting your speech to text...",
       });
 
-      sendMessage.setSelectedModel('gpt-4o-mini');
+      setSelectedModel('gpt-4o-mini');
     }
   };
 
