@@ -216,7 +216,7 @@ export default function ChatInterface() {
                 onValueChange={setSelectedModel}
                 disabled={isLoadingModels}
               >
-                <SelectTrigger className="w-[300px] bg-white text-black border-gray-700">
+                <SelectTrigger className="w-[350px] bg-white text-black border-gray-700">
                   <SelectValue placeholder="Select model" />
                 </SelectTrigger>
                 <SelectContent>

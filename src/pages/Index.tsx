@@ -40,7 +40,7 @@ export default function Index() {
             >
               {isPanelOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
-            <div className={`flex-grow transition-all duration-300 ${isPanelOpen ? 'ml-64' : 'ml-0'}`}>
+            <div className={`flex-grow transition-all duration-300 ${isPanelOpen ? 'ml-64' : 'ml-0'} bg-[#0000FF]/5`}>
               <ChatInterface />
             </div>
           </div>
