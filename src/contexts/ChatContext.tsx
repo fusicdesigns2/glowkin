@@ -46,7 +46,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [funFacts] = useState<string[]>(funFactsArray);
   const [currentFunFact, setCurrentFunFact] = useState<string>(funFactsArray[0]);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
-  const [errorDetails, setErrorDetails] = useState<{ prompt: string; error: string } | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -184,12 +183,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           toast.error(imageResponse);
           return;
         }
-
+        
         if ('error' in imageResponse) {
-          setErrorDetails({
-            prompt: content,
-            error: imageResponse.error
-          });
           setErrorDialogOpen(true);
           return;
         }
