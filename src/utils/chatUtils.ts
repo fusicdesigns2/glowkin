@@ -1,3 +1,4 @@
+
 import { Thread, ChatMessage, ThreadMessage } from '@/types/chat';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -64,7 +65,7 @@ export const loadThreadsFromDB = async (userId: string): Promise<Thread[]> => {
       title: thread.title,
       messages: messages.map(msg => ({
         id: msg.id,
-        role: msg.role,
+        role: msg.role as 'user' | 'assistant', // Type assertion to ensure compatibility
         content: msg.content,
         timestamp: new Date(msg.created_at)
       })),
@@ -144,7 +145,11 @@ export const sendChatMessage = async (messages: ChatMessage[], threadId?: string
     // Validate that we have what we need in the data structure
     if (!response.data.choices || !response.data.choices.length) {
       console.warn('No choices returned in the response:', response.data);
-      return "I'm sorry, I couldn't generate a response at this time. Please try again later.";
+      return {
+        content: "I'm sorry, I couldn't generate a response at this time. Please try again later.",
+        tokensUsed: 0,
+        model: "error"
+      };
     }
 
     // Safely extract the message content

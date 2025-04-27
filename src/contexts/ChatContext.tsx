@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
@@ -125,7 +126,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       
       await saveMessage(updatedThread.id, 'user', content, 'user-message', 0);
 
-      const { content: aiResponse, tokensUsed, model } = await sendChatMessage(updatedThread.messages);
+      const response = await sendChatMessage(updatedThread.messages);
+      
+      // Check if response is an error message string or a valid response object
+      if (typeof response === 'string') {
+        // Handle error string response
+        toast.error(response);
+        return;
+      }
+      
+      // Now TypeScript knows response has content, tokensUsed and model properties
+      const { content: aiResponse, tokensUsed, model } = response;
       
       await saveMessage(updatedThread.id, 'assistant', aiResponse, model, tokensUsed);
 
@@ -182,7 +193,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ChatContext.Provider value={value}>
+    <ChatContext.Provider value={{
+      threads,
+      currentThread,
+      isLoading,
+      createThread: createNewThread,
+      selectThread,
+      sendMessage,
+      getMessageCostEstimate,
+      funFacts,
+      currentFunFact,
+      refreshFunFact
+    }}>
       {children}
     </ChatContext.Provider>
   );
