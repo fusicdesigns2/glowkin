@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
@@ -71,9 +72,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       
       setThreads([newThread, ...threads]);
       setCurrentThread(newThread);
+      return newThread;
     } catch (error) {
       console.error('Failed to create thread:', error);
       toast.error('Failed to create new chat');
+      return null;
     }
   };
 
@@ -95,8 +98,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (!currentThread) {
-      await createNewThread();
+    let threadToUse = currentThread;
+    if (!threadToUse) {
+      threadToUse = await createNewThread();
+      if (!threadToUse) return;
     }
 
     setIsLoading(true);
@@ -111,13 +116,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       };
 
       const updatedThread = {
-        ...(currentThread || {
-          id: `thread_${Date.now()}`,
-          title: `New Chat ${threads.length + 1}`,
-          messages: [],
-          lastUpdated: new Date(),
-        }),
-        messages: [...(currentThread?.messages || []), userMessage],
+        ...threadToUse,
+        messages: [...threadToUse.messages, userMessage],
         lastUpdated: new Date(),
       };
 
@@ -191,18 +191,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ChatContext.Provider value={{
-      threads,
-      currentThread,
-      isLoading,
-      createThread: createNewThread,
-      selectThread,
-      sendMessage,
-      getMessageCostEstimate,
-      funFacts,
-      currentFunFact,
-      refreshFunFact
-    }}>
+    <ChatContext.Provider value={value}>
       {children}
     </ChatContext.Provider>
   );

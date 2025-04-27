@@ -29,6 +29,11 @@ export const saveMessage = async (
   model: string,
   tokensUsed: number
 ): Promise<void> => {
+  // Ensure threadId is a valid UUID before sending to Supabase
+  if (!threadId || !isValidUUID(threadId)) {
+    throw new Error(`Invalid thread ID format: ${threadId}`);
+  }
+
   const { error } = await supabase
     .from('chat_messages')
     .insert({
@@ -41,6 +46,12 @@ export const saveMessage = async (
 
   if (error) throw error;
 };
+
+// Helper function to validate UUID format
+function isValidUUID(id: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+}
 
 export const loadThreadsFromDB = async (userId: string): Promise<Thread[]> => {
   const { data: threads, error: threadsError } = await supabase
@@ -101,7 +112,7 @@ export const saveThreadsToStorage = (userId: string, threads: Thread[]): void =>
   localStorage.setItem(`maimai_threads_${userId}`, JSON.stringify(threads));
 };
 
-export const sendChatMessage = async (messages: ChatMessage[], threadId?: string) => {
+export const sendChatMessage = async (messages: ChatMessage[]) => {
   try {
     console.log('Sending chat messages to edge function:', messages);
     
