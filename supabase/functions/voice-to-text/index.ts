@@ -58,6 +58,9 @@ serve(async (req) => {
     formData.append('file', blob, 'audio.webm')
     formData.append('model', 'whisper-1')
 
+    // Log start of transcription
+    console.log('Starting transcription with Whisper API')
+    
     // Send to OpenAI
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
@@ -68,10 +71,13 @@ serve(async (req) => {
     })
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${await response.text()}`)
+      const errorText = await response.text()
+      console.error('OpenAI API error:', errorText)
+      throw new Error(`OpenAI API error: ${errorText}`)
     }
 
     const result = await response.json()
+    console.log('Transcription successful, text length:', result.text.length)
 
     return new Response(
       JSON.stringify({ text: result.text }),
@@ -79,6 +85,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
+    console.error('Transcription error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       {

@@ -1,9 +1,20 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface VoiceInputProps {
   onTranscription: (text: string) => void;
@@ -12,9 +23,85 @@ interface VoiceInputProps {
 
 const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
   const [isRecording, setIsRecording] = useState(false);
+  const [showConsent, setShowConsent] = useState(false);
+  const [showCountdown, setShowCountdown] = useState(false);
+  const [countdown, setCountdown] = useState(3);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [recordingInterval, setRecordingInterval] = useState<NodeJS.Timeout | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
   const { toast } = useToast();
+  const { user, profile } = useAuth();
+  const isMobile = useIsMobile();
+
+  // Check if user has consented to transcription before
+  useEffect(() => {
+    const checkConsent = async () => {
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('whisper_consent')
+        .eq('id', user.id)
+        .single();
+      
+      if (error) {
+        console.error('Error checking consent:', error);
+        return;
+      }
+      
+      if (!data.whisper_consent) {
+        setShowConsent(true);
+      }
+    };
+    
+    checkConsent();
+  }, [user]);
+
+  const handleConsent = async (consent: boolean) => {
+    if (!user) return;
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ 
+        whisper_consent: true,
+        whisper_consent_date: consent ? new Date().toISOString() : null
+      })
+      .eq('id', user.id);
+    
+    if (error) {
+      console.error('Error saving consent:', error);
+      toast({
+        title: "Error",
+        description: "Could not save your preference. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setShowConsent(false);
+    
+    if (consent) {
+      initiateCountdown();
+    }
+  };
+
+  const initiateCountdown = () => {
+    setShowCountdown(true);
+    setCountdown(3);
+    
+    const countdownInterval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          setShowCountdown(false);
+          startRecording();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
   const startRecording = async () => {
     try {
@@ -34,6 +121,20 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
           if (typeof reader.result === 'string') {
             const base64Audio = reader.result.split(',')[1];
             try {
+              // Get Whisper cost from model_costs table
+              const { data: modelData, error: modelError } = await supabase
+                .from('model_costs')
+                .select('*')
+                .eq('model', 'whisper-1')
+                .single();
+                
+              if (modelError) throw modelError;
+              
+              const secondsUsed = Math.ceil(recordingTime / 1000);
+              const estimatedCost = modelData ? 
+                (modelData.in_cost * secondsUsed * (modelData.markup || 1)) : 
+                0.01 * secondsUsed; // Default fallback cost
+              
               const { data, error } = await supabase.functions.invoke('voice-to-text', {
                 body: { audio: base64Audio }
               });
@@ -41,6 +142,18 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
               if (error) throw error;
               if (data.text) {
                 onTranscription(data.text);
+                
+                // Log the transcription usage
+                await supabase
+                  .from('chat_messages')
+                  .insert({
+                    role: 'system',
+                    content: `Voice transcription (${secondsUsed} seconds)`,
+                    model: 'whisper-1',
+                    input_tokens: 0,
+                    output_tokens: 0,
+                    credit_cost: Math.ceil(estimatedCost)
+                  });
               }
             } catch (error) {
               console.error('Transcription error:', error);
@@ -58,6 +171,12 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
 
       mediaRecorder.current.start();
       setIsRecording(true);
+      
+      // Start the recording timer
+      const interval = setInterval(() => {
+        setRecordingTime(prev => prev + 1000);
+      }, 1000);
+      setRecordingInterval(interval);
       
       toast({
         title: "Recording started",
@@ -78,6 +197,13 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
       mediaRecorder.current.stop();
       mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
       setIsRecording(false);
+      
+      // Clear the recording timer
+      if (recordingInterval) {
+        clearInterval(recordingInterval);
+        setRecordingInterval(null);
+      }
+      
       toast({
         title: "Processing",
         description: "Converting your speech to text...",
@@ -88,22 +214,101 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
   const toggleRecording = () => {
     if (isRecording) {
       stopRecording();
+      setRecordingTime(0);
     } else {
-      startRecording();
+      if (!user) {
+        toast({
+          title: "Login required",
+          description: "Please login to use the voice feature.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const { data } = supabase
+        .from('profiles')
+        .select('whisper_consent')
+        .eq('id', user.id)
+        .single();
+      
+      data.then(result => {
+        if (result && result.whisper_consent) {
+          initiateCountdown();
+        } else {
+          setShowConsent(true);
+        }
+      }).catch(() => setShowConsent(true));
     }
   };
 
+  const formatTime = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+  };
+
+  const ConsentDialog = () => (
+    <Dialog open={showConsent} onOpenChange={setShowConsent}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>We use OpenAI Whisper transcript service</DialogTitle>
+          <DialogDescription>
+            Transcript costs less than $0.01 per minute. Are you happy to continue?
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => handleConsent(false)}>
+            Oh, maybe not
+          </Button>
+          <Button onClick={() => handleConsent(true)}>
+            That's cool with me
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const CountdownOverlay = () => (
+    <Sheet open={showCountdown}>
+      <SheetContent side="bottom" className="h-40 flex items-center justify-center">
+        <div className="text-center">
+          <h3 className="text-2xl font-bold mb-2">Recording will start in</h3>
+          <span className="text-5xl font-bold text-maiRed">{countdown}</span>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className={`${isRecording ? 'text-red-500 animate-pulse' : ''}`}
-      onClick={toggleRecording}
-      disabled={disabled}
-    >
-      {isRecording ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        className={`relative p-0 h-14 w-14 rounded-full ${
+          isRecording 
+            ? 'bg-red-500 animate-pulse' 
+            : 'bg-amber-400 hover:bg-amber-500'
+        }`}
+        onClick={toggleRecording}
+        disabled={disabled}
+      >
+        {isRecording ? (
+          <MicOff className="h-8 w-8 text-white" />
+        ) : (
+          <Mic className="h-8 w-8 text-white" />
+        )}
+      </Button>
+      
+      {isRecording && (
+        <div className="ml-2 text-xs text-white">
+          {formatTime(recordingTime)}
+        </div>
+      )}
+      
+      <ConsentDialog />
+      <CountdownOverlay />
+    </>
   );
 };
 
