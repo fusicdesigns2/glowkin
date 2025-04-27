@@ -36,7 +36,13 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        messages,
+        messages: [
+          { role: 'system', content: 'You are a helpful AI assistant.' },
+          ...messages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }))
+        ],
         temperature: 0.7,
       }),
     })
@@ -46,7 +52,6 @@ serve(async (req) => {
     if (!response.ok) {
       console.error('OpenAI API error:', responseData);
       
-      // Handle specific OpenAI error types
       if (responseData.error?.code === 'insufficient_quota') {
         return new Response(JSON.stringify({ 
           error: 'OpenAI API quota exceeded. Please try again later or contact support.',
@@ -68,7 +73,6 @@ serve(async (req) => {
 
     console.log('OpenAI response received successfully');
     
-    // Include token usage in the response
     return new Response(JSON.stringify({
       ...responseData,
       usage: responseData.usage || { total_tokens: 0 },
@@ -87,3 +91,4 @@ serve(async (req) => {
     })
   }
 })
+

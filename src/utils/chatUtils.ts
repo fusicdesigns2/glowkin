@@ -127,13 +127,10 @@ export const sendChatMessage = async (messages: ChatMessage[]) => {
     
     const response = await supabase.functions.invoke('chat', {
       body: {
-        messages: [
-          { role: 'system', content: 'You are a helpful AI assistant.' },
-          ...messages.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          }))
-        ]
+        messages: messages.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }))
       }
     });
 
