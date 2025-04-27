@@ -116,7 +116,7 @@ export default function ChatInterface() {
                   <div 
                     className={`max-w-[80%] p-3 rounded-lg ${
                       msg.role === 'user' 
-                        ? 'bg-[#0000FF]/50 text-black font-bold rounded-tr-none' 
+                        ? 'bg-[#0000FF]/50 text-white font-bold rounded-tr-none' 
                         : 'bg-white border border-gray-200 rounded-tl-none shadow-sm'
                     }`}
                   >
@@ -124,7 +124,7 @@ export default function ChatInterface() {
                       className="prose prose-sm max-w-none" 
                       components={{
                         p: ({node, ...props}) => (
-                          <p className="my-4" {...props} />
+                          <p className={`my-4 ${msg.role === 'user' ? 'font-bold text-white' : ''}`} {...props} />
                         ),
                         img: ({node, ...props}) => (
                           <img 
@@ -140,7 +140,7 @@ export default function ChatInterface() {
                     
                     <div className={`text-xs mt-1 flex items-center gap-2 flex-wrap ${
                       msg.role === 'user' 
-                        ? 'text-black' 
+                        ? 'text-white/10' 
                         : 'text-gray-500'
                     }`}>
                       {msg.role === 'assistant' && (
@@ -162,7 +162,9 @@ export default function ChatInterface() {
                           )}
                         </>
                       )}
-                      <span className="text-black">{new Date(msg.timestamp).toLocaleTimeString()}</span>
+                      <span className={`${msg.role === 'user' ? 'text-[#403E43]/10' : 'text-black'}`}>
+                        {new Date(msg.timestamp).toLocaleTimeString()}
+                      </span>
                     </div>
                   </div>
                 </div>
