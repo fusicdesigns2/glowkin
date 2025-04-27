@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -159,25 +159,37 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
           if (typeof reader.result === 'string') {
             const base64Audio = reader.result.split(',')[1];
             try {
-              const { data: modelData, error: modelError } = await supabase
-                .from('model_costs')
-                .select('*')
-                .eq('model', 'whisper-1')
-                .single();
-                
-              if (modelError) throw modelError;
+              // Get model cost data - handle case when no data is found
+              let estimatedCost = 0;
+              let secondsUsed = Math.ceil(recordingTime / 1000);
               
-              const secondsUsed = Math.ceil(recordingTime / 1000);
-              const estimatedCost = modelData ? 
-                (modelData.in_cost * secondsUsed * (modelData.markup || 1)) : 
-                0.01 * secondsUsed; // Default fallback cost
+              try {
+                const { data: modelData, error: modelError } = await supabase
+                  .from('model_costs')
+                  .select('*')
+                  .eq('model', 'whisper-1')
+                  .eq('active', true)
+                  .single();
+                  
+                if (!modelError && modelData) {
+                  estimatedCost = (modelData.in_cost * secondsUsed * (modelData.markup || 1));
+                } else {
+                  // Default fallback cost if no model data found
+                  estimatedCost = 0.01 * secondsUsed;
+                  console.log('Using default cost estimation:', estimatedCost);
+                }
+              } catch (err) {
+                console.error('Error getting model cost:', err);
+                // Default fallback cost
+                estimatedCost = 0.01 * secondsUsed;
+              }
               
               const { data, error } = await supabase.functions.invoke('voice-to-text', {
                 body: { audio: base64Audio }
               });
 
               if (error) throw error;
-              if (data.text) {
+              if (data?.text) {
                 onTranscription(data.text);
                 
                 try {

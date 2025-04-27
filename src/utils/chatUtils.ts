@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Thread, ChatMessage, ThreadMessage, ModelCost } from '@/types/chat';
 
@@ -192,22 +193,27 @@ export const sendChatMessage = async (messages: ChatMessage[], generateImage: bo
 };
 
 export const getActiveModelCost = async (model: string): Promise<ModelCost | null> => {
-  const { data, error } = await supabase
-    .from('model_costs')
-    .select('*')
-    .eq('model', model)
-    .eq('active', true)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('model_costs')
+      .select('*')
+      .eq('model', model)
+      .eq('active', true)
+      .single();
 
-  if (error || !data) {
-    console.error('Error fetching model cost:', error);
+    if (error) {
+      console.error('Error fetching model cost:', error);
+      return null;
+    }
+
+    return data ? {
+      ...data,
+      date: new Date(data.date)
+    } : null;
+  } catch (error) {
+    console.error('Error in getActiveModelCost:', error);
     return null;
   }
-
-  return {
-    ...data,
-    date: new Date(data.date)
-  };
 };
 
 export const calculateTokenCosts = (inputTokens: number, outputTokens: number, modelCost: ModelCost): number => {
