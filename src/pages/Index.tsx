@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import ChatInterface from '@/components/ChatInterface';
@@ -32,7 +31,7 @@ export default function Index() {
         {user ? (
           <div className="flex w-full h-[80vh] relative bg-[#403E43]">
             {isPanelOpen && 
-              <div className="h-full w-[5px] bg-[#403E43]"> {/* Explicitly set width to 5px and background */}
+              <div className="bg-[#403E43] h-full">
                 <ThreadList />
               </div>
             }
@@ -44,7 +43,7 @@ export default function Index() {
             >
               {isPanelOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
-            <div className={`flex-grow ${isPanelOpen ? 'ml-[5px]' : 'ml-0'} transition-all duration-300`}>
+            <div className={`flex-grow ${isPanelOpen ? 'ml-0' : 'ml-0'} transition-all duration-300`}>
               <ChatInterface />
             </div>
           </div>
@@ -88,7 +87,7 @@ export default function Index() {
               <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                 <div className="mb-4 text-maiRed">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold mb-2">Smart Answers</h3>
