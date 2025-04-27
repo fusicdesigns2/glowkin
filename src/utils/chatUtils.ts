@@ -1,11 +1,78 @@
-
-import { Thread, ChatMessage } from '@/types/chat';
+import { Thread, ChatMessage, ThreadMessage } from '@/types/chat';
 import { supabase } from '@/integrations/supabase/client';
 
 export const getMessageCostEstimate = (content: string): number => {
   const charCount = content.length;
   const creditsPerChar = 0.01; // 1 credit per 100 chars
   return Math.max(1, Math.ceil(charCount * creditsPerChar));
+};
+
+export const createThread = async (userId: string, title: string): Promise<string> => {
+  const { data, error } = await supabase
+    .from('chat_threads')
+    .insert({
+      user_id: userId,
+      title
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data.id;
+};
+
+export const saveMessage = async (
+  threadId: string, 
+  role: 'user' | 'assistant', 
+  content: string,
+  model: string,
+  tokensUsed: number
+): Promise<void> => {
+  const { error } = await supabase
+    .from('chat_messages')
+    .insert({
+      thread_id: threadId,
+      role,
+      content,
+      model,
+      tokens_used: tokensUsed
+    });
+
+  if (error) throw error;
+};
+
+export const loadThreadsFromDB = async (userId: string): Promise<Thread[]> => {
+  const { data: threads, error: threadsError } = await supabase
+    .from('chat_threads')
+    .select('*')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false });
+
+  if (threadsError) throw threadsError;
+
+  const loadedThreads = await Promise.all(threads.map(async (thread) => {
+    const { data: messages, error: messagesError } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('thread_id', thread.id)
+      .order('created_at', { ascending: true });
+
+    if (messagesError) throw messagesError;
+
+    return {
+      id: thread.id,
+      title: thread.title,
+      messages: messages.map(msg => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        timestamp: new Date(msg.created_at)
+      })),
+      lastUpdated: new Date(thread.updated_at)
+    };
+  }));
+
+  return loadedThreads;
 };
 
 export const loadThreadsFromStorage = (userId: string): Thread[] | null => {
@@ -31,7 +98,7 @@ export const saveThreadsToStorage = (userId: string, threads: Thread[]): void =>
   localStorage.setItem(`maimai_threads_${userId}`, JSON.stringify(threads));
 };
 
-export const sendChatMessage = async (messages: ChatMessage[]) => {
+export const sendChatMessage = async (messages: ChatMessage[], threadId?: string) => {
   try {
     console.log('Sending chat messages to edge function:', messages);
     
@@ -82,21 +149,16 @@ export const sendChatMessage = async (messages: ChatMessage[]) => {
 
     // Safely extract the message content
     const messageContent = response.data.choices[0]?.message?.content;
-    if (!messageContent) {
-      console.warn('No message content in the response:', response.data);
-      return "I apologize, but I received an empty response. Please try a different question.";
-    }
+    const tokensUsed = response.data.usage?.total_tokens || 0;
+    const model = response.data.model || 'gpt-4o-mini';
 
-    return messageContent;
+    return {
+      content: messageContent,
+      tokensUsed,
+      model
+    };
   } catch (error) {
     console.error('Error in sendChatMessage:', error);
-    
-    // Return a user-friendly error message
-    const errorMessage = error.message || 'Unknown error';
-    if (errorMessage.includes('quota')) {
-      return `Error: OpenAI API quota exceeded. The AI service is currently unavailable due to quota limitations. Please try again later or contact support.`;
-    }
-    
-    return `Error: ${errorMessage}. Please try again later.`;
+    throw error;
   }
 };

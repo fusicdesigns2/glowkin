@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
@@ -6,8 +5,9 @@ import { Thread, ChatMessage } from '@/types/chat';
 import { funFactsArray } from '@/data/funFacts';
 import { 
   getMessageCostEstimate, 
-  loadThreadsFromStorage, 
-  saveThreadsToStorage,
+  createThread,
+  saveMessage,
+  loadThreadsFromDB,
   sendChatMessage 
 } from '@/utils/chatUtils';
 
@@ -41,38 +41,40 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const loadedThreads = loadThreadsFromStorage(user.id);
-    if (loadedThreads) {
-      setThreads(loadedThreads);
-      if (loadedThreads.length > 0) {
-        setCurrentThread(loadedThreads[0]);
+    const loadThreads = async () => {
+      try {
+        const loadedThreads = await loadThreadsFromDB(user.id);
+        setThreads(loadedThreads);
+        if (loadedThreads.length > 0) {
+          setCurrentThread(loadedThreads[0]);
+        }
+      } catch (error) {
+        console.error('Failed to load threads:', error);
+        toast.error('Failed to load chat history');
       }
-    }
+    };
+
+    loadThreads();
   }, [user]);
 
-  useEffect(() => {
-    if (user && threads.length > 0) {
-      saveThreadsToStorage(user.id, threads);
-    }
-  }, [threads, user]);
-
-  const refreshFunFact = () => {
-    const randomIndex = Math.floor(Math.random() * funFacts.length);
-    setCurrentFunFact(funFacts[randomIndex]);
-  };
-
-  const createThread = () => {
+  const createNewThread = async () => {
     if (!user) return;
     
-    const newThread: Thread = {
-      id: `thread_${Date.now()}`,
-      title: `New Chat ${threads.length + 1}`,
-      messages: [],
-      lastUpdated: new Date(),
-    };
-    
-    setThreads([newThread, ...threads]);
-    setCurrentThread(newThread);
+    try {
+      const threadId = await createThread(user.id, `New Chat ${threads.length + 1}`);
+      const newThread: Thread = {
+        id: threadId,
+        title: `New Chat ${threads.length + 1}`,
+        messages: [],
+        lastUpdated: new Date(),
+      };
+      
+      setThreads([newThread, ...threads]);
+      setCurrentThread(newThread);
+    } catch (error) {
+      console.error('Failed to create thread:', error);
+      toast.error('Failed to create new chat');
+    }
   };
 
   const selectThread = (threadId: string) => {
@@ -94,14 +96,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (!currentThread) {
-      createThread();
+      await createNewThread();
     }
 
     setIsLoading(true);
     refreshFunFact();
 
     try {
-      // Create and add user message to thread
       const userMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'user',
@@ -109,28 +110,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         timestamp: new Date(),
       };
 
-      // Get the current thread (or create one if needed)
-      const threadToUpdate = currentThread || {
-        id: `thread_${Date.now()}`,
-        title: `New Chat ${threads.length + 1}`,
-        messages: [],
-        lastUpdated: new Date(),
-      };
-
       const updatedThread = {
-        ...threadToUpdate,
-        messages: [...threadToUpdate.messages, userMessage],
+        ...(currentThread || {
+          id: `thread_${Date.now()}`,
+          title: `New Chat ${threads.length + 1}`,
+          messages: [],
+          lastUpdated: new Date(),
+        }),
+        messages: [...(currentThread?.messages || []), userMessage],
         lastUpdated: new Date(),
       };
 
-      // Update state right away with user message
       setCurrentThread(updatedThread);
-      setThreads(prev => prev.map(t => t.id === updatedThread.id ? updatedThread : t));
-
-      // Send message to AI and get response
-      const aiResponse = await sendChatMessage(updatedThread.messages);
       
-      // Create AI message and add to thread
+      await saveMessage(updatedThread.id, 'user', content, 'user-message', 0);
+
+      const { content: aiResponse, tokensUsed, model } = await sendChatMessage(updatedThread.messages);
+      
+      await saveMessage(updatedThread.id, 'assistant', aiResponse, model, tokensUsed);
+
       const aiMessage: ChatMessage = {
         id: `msg_${Date.now() + 1}`,
         role: 'assistant',
@@ -144,16 +142,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         lastUpdated: new Date(),
       };
 
-      // If this is a quota error, don't deduct credits
-      if (aiResponse.includes('quota exceeded') || aiResponse.includes('Error:')) {
-        toast.error(aiResponse);
-      } else {
-        // Update credits only if the message was sent successfully
-        await updateCredits(profile.credits - estimatedCost);
-        toast.success(`${estimatedCost} credits used for this response`);
-      }
+      await updateCredits(profile.credits - estimatedCost);
+      toast.success(`${estimatedCost} credits used for this response`);
 
-      // Update with AI response
       setCurrentThread(finalThread);
       setThreads(prev => {
         const existingIndex = prev.findIndex(t => t.id === finalThread.id);
@@ -172,11 +163,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshFunFact = () => {
+    const randomIndex = Math.floor(Math.random() * funFacts.length);
+    setCurrentFunFact(funFacts[randomIndex]);
+  };
+
   const value = {
     threads,
     currentThread,
     isLoading,
-    createThread,
+    createThread: createNewThread,
     selectThread,
     sendMessage,
     getMessageCostEstimate,

@@ -68,7 +68,12 @@ serve(async (req) => {
 
     console.log('OpenAI response received successfully');
     
-    return new Response(JSON.stringify(responseData), {
+    // Include token usage in the response
+    return new Response(JSON.stringify({
+      ...responseData,
+      usage: responseData.usage || { total_tokens: 0 },
+      model: responseData.model || 'gpt-4o-mini'
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
