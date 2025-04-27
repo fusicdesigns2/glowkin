@@ -318,17 +318,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       <AlertDialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Image Generation Error</AlertDialogTitle>
+            <AlertDialogTitle>Images Not Yet Supported</AlertDialogTitle>
             <AlertDialogDescription>
-              <div className="space-y-2">
-                <p>Failed to generate image with the following prompt:</p>
-                <pre className="bg-muted p-2 rounded-md whitespace-pre-wrap">
-                  {errorDetails?.prompt}
-                </pre>
-                <p className="font-medium mt-4">Error message:</p>
-                <pre className="bg-muted p-2 rounded-md text-red-500 whitespace-pre-wrap">
-                  {errorDetails?.error}
-                </pre>
+              <div className="space-y-4 text-center">
+                <p>Images are not yet supported. We are working on it.</p>
+                <p>Let us know at <a href="https://facebook.com/chat-ai-box" className="text-blue-500 underline">facebook.com/chat-ai-box</a> that you'd love images and maybe we can give you an update.</p>
+                <p className="mt-4 font-semibold">Thank you for your support!</p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
