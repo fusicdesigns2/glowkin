@@ -1,21 +1,15 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
-
-interface Thread {
-  id: string;
-  title: string;
-  messages: ChatMessage[];
-  lastUpdated: Date;
-}
+import { Thread, ChatMessage } from '@/types/chat';
+import { funFactsArray } from '@/data/funFacts';
+import { 
+  getMessageCostEstimate, 
+  loadThreadsFromStorage, 
+  saveThreadsToStorage,
+  sendChatMessage 
+} from '@/utils/chatUtils';
 
 interface ChatContextType {
   threads: Thread[];
@@ -32,19 +26,6 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-const funFactsArray = [
-  "The first computer bug was literally a bug - a moth found in a Harvard Mark II computer in 1947!",
-  "An AI assistant like me consumes roughly 10-20 watts of power to answer a question - much less than a human brain!",
-  "The term 'artificial intelligence' was first coined in 1956 at Dartmouth College.",
-  "ChatGPT was trained on approximately 570GB of data, equivalent to about 300,000 books!",
-  "The average human types 40 words per minute, while AI can generate over 100 words per second!",
-  "AI models like me don't actually 'know' anything - we're just very good at predicting what text should come next.",
-  "GPT-4 has about 1.8 trillion parameters, while the human brain has about 100 trillion synapses.",
-  "About 97% of the AI prompts people type include at least one typo or grammatical error - but we can usually understand anyway!",
-  "If printed on paper, the data used to train large language models would create a stack higher than Mount Everest!",
-  "AI can now generate images, music, and code - but still can't tell if your jokes are actually funny!",
-];
-
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { user, profile, updateCredits } = useAuth();
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -60,30 +41,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const storedThreads = localStorage.getItem(`maimai_threads_${user.id}`);
-    if (storedThreads) {
-      try {
-        const parsedThreads = JSON.parse(storedThreads).map((thread: any) => ({
-          ...thread,
-          lastUpdated: new Date(thread.lastUpdated),
-          messages: thread.messages.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp),
-          })),
-        }));
-        setThreads(parsedThreads);
-        if (parsedThreads.length > 0) {
-          setCurrentThread(parsedThreads[0]);
-        }
-      } catch (e) {
-        console.error('Failed to parse stored threads:', e);
+    const loadedThreads = loadThreadsFromStorage(user.id);
+    if (loadedThreads) {
+      setThreads(loadedThreads);
+      if (loadedThreads.length > 0) {
+        setCurrentThread(loadedThreads[0]);
       }
     }
   }, [user]);
 
   useEffect(() => {
     if (user && threads.length > 0) {
-      localStorage.setItem(`maimai_threads_${user.id}`, JSON.stringify(threads));
+      saveThreadsToStorage(user.id, threads);
     }
   }, [threads, user]);
 
@@ -111,12 +80,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     if (thread) {
       setCurrentThread(thread);
     }
-  };
-
-  const getMessageCostEstimate = (content: string) => {
-    const charCount = content.length;
-    const creditsPerChar = 0.01; // 1 credit per 100 chars
-    return Math.max(1, Math.ceil(charCount * creditsPerChar));
   };
 
   const sendMessage = async (content: string, estimatedCost: number) => {
@@ -154,23 +117,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setCurrentThread(updatedThread);
       setThreads(threads.map(t => t.id === updatedThread.id ? updatedThread : t));
 
-      const response = await supabase.functions.invoke('chat', {
-        body: {
-          messages: [
-            { role: 'system', content: 'You are a helpful AI assistant.' },
-            ...updatedThread.messages.map(msg => ({
-              role: msg.role,
-              content: msg.content
-            }))
-          ]
-        }
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      const aiResponse = response.data.choices[0].message.content;
+      const aiResponse = await sendChatMessage(updatedThread.messages);
       
       const aiMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
@@ -199,14 +146,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ChatContext.Provider 
-      value={{ 
-        threads, 
-        currentThread, 
-        isLoading, 
-        createThread, 
-        selectThread, 
-        sendMessage, 
+    <ChatContext.Provider
+      value={{
+        threads,
+        currentThread,
+        isLoading,
+        createThread,
+        selectThread,
+        sendMessage,
         getMessageCostEstimate,
         funFacts,
         currentFunFact,
