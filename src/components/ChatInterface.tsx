@@ -9,6 +9,8 @@ import LoadingScreen from './LoadingScreen';
 import { getActiveModelCost, calculateTokenCosts } from '@/utils/chatUtils';
 import { ModelCost } from '@/types/chat';
 import ReactMarkdown from 'react-markdown';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useActiveModels } from '@/hooks/useActiveModels';
 
 export default function ChatInterface() {
   const { currentThread, sendMessage, isLoading, getMessageCostEstimate } = useChat();
@@ -17,6 +19,8 @@ export default function ChatInterface() {
   const [estimatedCost, setEstimatedCost] = useState(0);
   const [modelCosts, setModelCosts] = useState<Record<string, ModelCost>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [selectedModel, setSelectedModel] = useState('gpt-4.1-mini-2025-04-14');
+  const { data: activeModels, isLoading: isLoadingModels } = useActiveModels();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -54,7 +58,7 @@ export default function ChatInterface() {
     e.preventDefault();
     if (!message.trim() || !user || !profile) return;
 
-    await sendMessage(message.trim(), estimatedCost);
+    await sendMessage(message.trim(), estimatedCost, selectedModel);
     setMessage('');
   };
 
@@ -178,13 +182,32 @@ export default function ChatInterface() {
               )}
             </div>
             
-            <Button 
-              type="submit" 
-              className="bg-maiRed hover:bg-red-600"
-              disabled={!message.trim() || !profile || profile.credits < estimatedCost}
-            >
-              Send
-            </Button>
+            <div className="flex items-center gap-2">
+              <Select
+                value={selectedModel}
+                onValueChange={setSelectedModel}
+                disabled={isLoadingModels}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeModels?.map((model) => (
+                    <SelectItem key={model.model} value={model.model}>
+                      {model.model}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button 
+                type="submit" 
+                className="bg-maiRed hover:bg-red-600"
+                disabled={!message.trim() || !profile || profile.credits < estimatedCost}
+              >
+                Send
+              </Button>
+            </div>
           </div>
         </form>
       </div>

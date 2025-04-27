@@ -121,9 +121,9 @@ export const saveThreadsToStorage = (userId: string, threads: Thread[]): void =>
   localStorage.setItem(`maimai_threads_${userId}`, JSON.stringify(threads));
 };
 
-export const sendChatMessage = async (messages: ChatMessage[], generateImage: boolean = false) => {
+export const sendChatMessage = async (messages: ChatMessage[], generateImage: boolean = false, model: string = 'gpt-4.1-mini-2025-04-14') => {
   try {
-    console.log('Sending chat messages to edge function:', messages);
+    console.log('Sending chat messages to edge function:', messages, 'using model:', model);
     
     const response = await supabase.functions.invoke('chat', {
       body: {
@@ -131,7 +131,8 @@ export const sendChatMessage = async (messages: ChatMessage[], generateImage: bo
           role: msg.role,
           content: msg.content
         })),
-        generateImage
+        generateImage,
+        model
       }
     });
 
@@ -176,13 +177,13 @@ export const sendChatMessage = async (messages: ChatMessage[], generateImage: bo
     const messageContent = response.data.choices[0]?.message?.content;
     const inputTokens = response.data.usage?.prompt_tokens || 0;
     const outputTokens = response.data.usage?.completion_tokens || 0;
-    const model = response.data.model || 'gpt-4.1-mini-2025-04-14';
+    const usedModel = response.data.model || model;
 
     return {
       content: messageContent,
       input_tokens: inputTokens,
       output_tokens: outputTokens,
-      model
+      model: usedModel
     };
   } catch (error) {
     console.error('Error in sendChatMessage:', error);

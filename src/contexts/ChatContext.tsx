@@ -28,7 +28,7 @@ interface ChatContextType {
   isLoading: boolean;
   createThread: () => void;
   selectThread: (threadId: string) => void;
-  sendMessage: (content: string, estimatedCost: number) => Promise<void>;
+  sendMessage: (content: string, estimatedCost: number, model?: string) => Promise<void>;
   getMessageCostEstimate: (content: string) => number;
   funFacts: string[];
   currentFunFact: string;
@@ -111,7 +111,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const sendMessage = async (content: string, estimatedCost: number) => {
+  const sendMessage = async (content: string, estimatedCost: number, model = 'gpt-4.1-mini-2025-04-14') => {
     if (!user || !profile) {
       toast.error('You need to be logged in to send messages');
       return;
@@ -229,25 +229,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         });
 
       } else {
-        const aiResponse = await sendChatMessage(updatedThread.messages);
+        const aiResponse = await sendChatMessage(updatedThread.messages, false, model);
         
         if (typeof aiResponse === 'string') {
           toast.error(aiResponse);
           return;
         }
         
-        const { content: aiResponseContent, input_tokens, output_tokens, model } = aiResponse;
+        const { content: aiResponseContent, input_tokens, output_tokens, model: usedModel } = aiResponse;
         
-        const tenXCost = Math.ceil(estimatedCost * 10); // Calculate 10x cost
+        const tenXCost = Math.ceil(estimatedCost * 10);
 
         await saveMessage(
           updatedThread.id, 
           'assistant', 
           aiResponseContent, 
-          model, 
+          usedModel, 
           input_tokens, 
           output_tokens,
-          tenXCost // Pass 10x cost to saveMessage
+          tenXCost
         );
 
         const aiMessage: ChatMessage = {
@@ -258,7 +258,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           model: model,
           input_tokens: input_tokens,
           output_tokens: output_tokens,
-          tenXCost // Add 10x cost to AI message
+          tenXCost
         };
 
         const finalThread = {
