@@ -32,7 +32,7 @@ export default function Index() {
         {user ? (
           <div className="flex w-full h-[80vh] relative bg-[#403E43]">
             {isPanelOpen && 
-              <div className="h-full">
+              <div className="h-full w-[5px]"> {/* Changed width to 5px */}
                 <ThreadList />
               </div>
             }
@@ -44,7 +44,7 @@ export default function Index() {
             >
               {isPanelOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
-            <div className={`flex-grow ${isPanelOpen ? 'ml-64' : 'ml-0'} transition-all duration-300`}>
+            <div className={`flex-grow ${isPanelOpen ? 'ml-[5px]' : 'ml-0'} transition-all duration-300`}>
               <ChatInterface />
             </div>
           </div>
