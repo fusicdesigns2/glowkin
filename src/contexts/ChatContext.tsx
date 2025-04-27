@@ -153,7 +153,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         content, 
         'user-message', 
         0, 
-        0
+        0,
+        0,
+        estimatedCost
       );
 
       if (isImageRequest(content)) {
@@ -217,7 +219,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           model,
           0,
           0,
-          aiMessage.tenXCost
+          aiMessage.tenXCost,
+          estimatedCost
         );
 
         await updateCredits(profile.credits - imageCost);
@@ -247,7 +250,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           usedModel, 
           input_tokens, 
           output_tokens,
-          tenXCost
+          tenXCost,
+          estimatedCost
         );
 
         const aiMessage: ChatMessage = {

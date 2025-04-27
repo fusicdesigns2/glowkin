@@ -29,7 +29,8 @@ export const saveMessage = async (
   model: string,
   inputTokens: number,
   outputTokens: number,
-  tenXCost: number = 0
+  tenXCost: number = 0,
+  predictedCost: number | null = null // Add predictedCost parameter
 ): Promise<void> => {
   if (!threadId || !isValidUUID(threadId)) {
     throw new Error(`Invalid thread ID format: ${threadId}`);
@@ -50,7 +51,8 @@ export const saveMessage = async (
       input_tokens: inputTokens,
       output_tokens: outputTokens,
       "10x_cost": tenXCost,
-      credit_cost: creditCost
+      credit_cost: creditCost,
+      predicted_cost: predictedCost // Add predicted cost to the insert
     });
 
   if (error) throw error;
