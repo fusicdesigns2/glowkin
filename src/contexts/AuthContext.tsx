@@ -60,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        // Properly handle the promise chain with proper error handling
         supabase
           .from('profiles')
           .select('*')
@@ -69,13 +70,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(data);
             setLoading(false);
           })
-          .catch(error => {
+          .catch((error) => {
             console.error('Error fetching profile:', error);
             setLoading(false);
           });
       } else {
         setLoading(false);
       }
+    }).catch(error => {
+      console.error('Error getting session:', error);
+      setLoading(false);
     });
 
     return () => {
