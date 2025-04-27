@@ -13,7 +13,6 @@ import ReactMarkdown from 'react-markdown';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useActiveModels } from '@/hooks/useActiveModels';
 import { useCostPrediction } from '@/hooks/useCostPrediction';
-import { Menu, X } from 'lucide-react';
 
 export default function ChatInterface() {
   const { currentThread, sendMessage, isLoading, getMessageCostEstimate } = useChat();
@@ -105,7 +104,7 @@ export default function ChatInterface() {
 
   return (
     <div className="flex flex-col h-[80vh]">
-      <div className="flex-grow overflow-auto p-4 bg-[#0000FF]/5 flex">
+      <div className="flex-grow overflow-auto p-4 bg-[#0000FF]/5">
         <div className="flex-grow pr-5">
           {currentThread?.messages && currentThread.messages.length > 0 ? (
             <div className="space-y-4">
@@ -178,7 +177,6 @@ export default function ChatInterface() {
             </div>
           )}
         </div>
-        <div className="w-[5px] bg-[#403E43]"></div>
       </div>
 
       <div className="p-4 bg-[#403E43]">
@@ -199,7 +197,7 @@ export default function ChatInterface() {
                 </span>
               )}
               {predictedCost !== null && (
-                <div className="text-gray-300 text-xs">
+                <div className="text-white/70 text-xs">
                   Average cost for {selectedModel}: {predictedCost} credits
                   {predictionDate && (
                     <span className="ml-1">
