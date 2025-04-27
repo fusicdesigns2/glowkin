@@ -149,7 +149,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       if (isImageRequest(content)) {
         const imageCost = await calculateImageCost();
         if (!window.confirm(
-          `This appears to be an image generation request. Generating an image will cost ${imageCost} credits. The image will be stored for 7 days. Would you like to proceed?`
+          `This appears to be an image generation request. The following prompt will be used:\n\n"${content}"\n\nGenerating an image will cost ${imageCost} credits. Would you like to proceed?`
         )) {
           const cancelMessage: ChatMessage = {
             id: `msg_${Date.now()}`,

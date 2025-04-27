@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
@@ -27,19 +26,17 @@ serve(async (req) => {
     }
 
     if (generateImage) {
-      console.log('Generating image with prompt:', messages[messages.length - 1].content);
+      // Get only the last message for image generation
+      const userPrompt = messages[messages.length - 1].content;
+      console.log('Generating image with prompt:', userPrompt);
       
       try {
-        // Get the user's prompt
-        const userPrompt = messages[messages.length - 1].content;
-        
-        // Enhanced prompt to make it more DALL-E friendly
+        // Enhanced prompt
         let enhancedPrompt = userPrompt;
         if (enhancedPrompt.length < 20) {
           enhancedPrompt = `A detailed, high-quality image of ${userPrompt}`;
         }
         
-        // Add style guidance for better results
         if (!enhancedPrompt.toLowerCase().includes('style') && 
             !enhancedPrompt.toLowerCase().includes('detailed')) {
           enhancedPrompt += ". Create in a detailed, professional art style.";
@@ -90,7 +87,8 @@ serve(async (req) => {
         
         return new Response(JSON.stringify({
           url: imageData.data[0].url,
-          model: 'image-alpha-001'
+          model: 'image-alpha-001',
+          prompt: userPrompt // Return the original prompt for display
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -107,8 +105,7 @@ serve(async (req) => {
     }
 
     console.log('Processing chat request with messages:', JSON.stringify(messages).substring(0, 100) + '...');
-
-    // Regular chat completion request
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
