@@ -1,7 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
+import { supabase } from '../supabase';
 
 interface ChatMessage {
   id: string;
@@ -53,7 +53,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [funFacts] = useState<string[]>(funFactsArray);
   const [currentFunFact, setCurrentFunFact] = useState<string>(funFactsArray[0]);
 
-  // Load threads from local storage
   useEffect(() => {
     if (!user) {
       setThreads([]);
@@ -82,7 +81,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  // Save threads to local storage
   useEffect(() => {
     if (user && threads.length > 0) {
       localStorage.setItem(`maimai_threads_${user.id}`, JSON.stringify(threads));
@@ -116,8 +114,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getMessageCostEstimate = (content: string) => {
-    // This is a simplified cost estimate based on character count
-    // In a real app, you would calculate this based on token count and model pricing
     const charCount = content.length;
     const creditsPerChar = 0.01; // 1 credit per 100 chars
     return Math.max(1, Math.ceil(charCount * creditsPerChar));
@@ -142,7 +138,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     refreshFunFact();
 
     try {
-      // Create user message
       const userMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'user',
@@ -150,7 +145,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         timestamp: new Date(),
       };
 
-      // Update thread with user message first
       const updatedThread = {
         ...(currentThread as Thread),
         messages: [...(currentThread?.messages || []), userMessage],
@@ -160,28 +154,31 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setCurrentThread(updatedThread);
       setThreads(threads.map(t => t.id === updatedThread.id ? updatedThread : t));
 
-      // Simulate network delay and AI processing time
-      await new Promise(r => setTimeout(r, 2000));
+      const response = await supabase.functions.invoke('chat', {
+        body: {
+          messages: [
+            { role: 'system', content: 'You are a helpful AI assistant.' },
+            ...updatedThread.messages.map(msg => ({
+              role: msg.role,
+              content: msg.content
+            }))
+          ]
+        }
+      });
 
-      // Generate AI response (mock)
-      const aiResponses = [
-        "That's a fascinating question! Based on my knowledge, I'd say it depends on various factors. What specifically are you trying to understand?",
-        "Great question! From what I understand, there are multiple perspectives on this topic. Would you like me to explore a specific aspect in more detail?",
-        "I've analyzed your question and found some interesting information. The key insight is that this area has been evolving rapidly in recent years.",
-        "Thanks for asking! This is actually a complex topic with several important considerations. Let me break it down for you step by step.",
-        "I appreciate your curiosity! The answer involves a combination of factors, including recent research and established principles in this field."
-      ];
-      
-      const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const aiResponse = response.data.choices[0].message.content;
       
       const aiMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: randomResponse,
+        content: aiResponse,
         timestamp: new Date(),
       };
 
-      // Update thread with AI response
       const finalThread = {
         ...updatedThread,
         messages: [...updatedThread.messages, aiMessage],
@@ -191,7 +188,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setCurrentThread(finalThread);
       setThreads(threads.map(t => t.id === finalThread.id ? finalThread : t));
 
-      // Deduct credits
       await updateCredits(profile.credits - estimatedCost);
       toast.success(`${estimatedCost} credits used for this response`);
 

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,7 +31,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
@@ -51,7 +49,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Check current session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -124,7 +121,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { error } = await supabase
       .from('profiles')
-      .update({ credits: newCreditsAmount, updated_at: new Date() })
+      .update({ 
+        credits: newCreditsAmount, 
+        updated_at: new Date().toISOString()
+      })
       .eq('id', user.id);
 
     if (error) {
@@ -132,7 +132,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
 
-    // Update local profile state
     setProfile(prev => prev ? { ...prev, credits: newCreditsAmount } : null);
   };
 
