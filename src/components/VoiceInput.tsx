@@ -37,35 +37,8 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
   const { sendMessage, setSelectedModel } = useChat();
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    const checkConsent = async () => {
-      if (!user) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('whisper_consent')
-          .eq('id', user.id)
-          .single();
-        
-        if (error) {
-          console.error('Error checking consent:', error);
-          return;
-        }
-        
-        setHasCheckedConsent(true);
-        if (data && !data.whisper_consent) {
-          setShowConsent(true);
-        }
-      } catch (error) {
-        console.error('Failed to check consent status:', error);
-      }
-    };
-    
-    if (user && !hasCheckedConsent) {
-      checkConsent();
-    }
-  }, [user, hasCheckedConsent]);
+  // Remove the auto-check on component mount to prevent dialog from showing automatically
+  // We'll only check consent when the button is clicked
 
   const handleConsent = async (consent: boolean) => {
     if (!user) return;
