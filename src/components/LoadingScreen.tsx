@@ -8,11 +8,15 @@ export default function LoadingScreen() {
   
   // Change the fun fact every 8 seconds
   useEffect(() => {
+    console.log('LoadingScreen mounted with fun fact:', currentFunFact);
     const interval = setInterval(() => {
       refreshFunFact();
     }, 8000);
     
-    return () => clearInterval(interval);
+    return () => {
+      console.log('LoadingScreen unmounted');
+      clearInterval(interval);
+    };
   }, [refreshFunFact]);
   
   return (

@@ -1,5 +1,4 @@
-
-import React, { useEffect } from 'react';
+import React from 'react';
 import Header from '@/components/Header';
 import ChatInterface from '@/components/ChatInterface';
 import ThreadList from '@/components/ThreadList';
@@ -9,14 +8,12 @@ import { Loading } from '@/components/ui/loading';
 export default function Index() {
   const { user, isLoading } = useAuth();
 
-  useEffect(() => {
-    console.log('Index page - Auth state:', { user, isLoading });
-  }, [user, isLoading]);
+  console.log('Index page rendered:', { user: !!user, isLoading });
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-maiBg">
-        <Loading size="lg" text="Loading application..." className="h-screen" />
+      <div className="min-h-screen bg-maiBg flex items-center justify-center">
+        <Loading size="lg" text="Loading application..." />
       </div>
     );
   }

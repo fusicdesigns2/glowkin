@@ -31,99 +31,115 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
   const navigate = useNavigate();
+
+  // Implement a timeout to prevent infinite loading
+  useEffect(() => {
+    console.log('Setting up auth timeout safety');
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.log('AUTH TIMEOUT TRIGGERED: Force exiting loading state after 5 seconds');
+        setLoading(false);
+      }
+    }, 5000); // Force exit loading state after 5 seconds
+
+    return () => clearTimeout(timeout);
+  }, []);
 
   useEffect(() => {
     console.log('AuthProvider effect running');
-    let isMounted = true; // Flag to prevent state updates after unmount
 
-    // Set up auth state listener FIRST
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        if (!isMounted) return;
+      (event, currentSession) => {
+        console.log('Auth state changed:', event, currentSession?.user?.id);
         
-        setSession(session);
-        setUser(session?.user ?? null);
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
 
-        // If session exists, fetch user profile, but don't await here
-        if (session?.user) {
+        // Immediately fetch profile if we have a user
+        if (currentSession?.user) {
           // Use setTimeout to prevent potential deadlocks
           setTimeout(() => {
-            fetchUserProfile(session.user.id);
+            fetchUserProfile(currentSession.user.id);
           }, 0);
         } else {
           setProfile(null);
+          // Make sure we exit loading state if there's no user
+          setLoading(false);
         }
       }
     );
 
     // THEN check for existing session
-    const fetchSession = async () => {
-      console.log('Fetching existing session');
+    const fetchInitialSession = async () => {
+      console.log('Fetching initial session');
       try {
         const { data } = await supabase.auth.getSession();
-        if (!isMounted) return;
+        const initialSession = data.session;
         
-        const session = data.session;
-        setSession(session);
-        setUser(session?.user ?? null);
+        console.log('Initial session fetch complete:', initialSession?.user?.id || 'no session');
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
         
-        if (session?.user) {
-          await fetchUserProfile(session.user.id);
+        if (initialSession?.user) {
+          await fetchUserProfile(initialSession.user.id);
         } else {
-          // Even if there's no session, we should exit loading state
+          // No user, so we're done loading
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error getting session:', error);
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    const fetchUserProfile = async (userId: string) => {
-      try {
-        console.log('Fetching profile for user:', userId);
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
-        
-        if (!isMounted) return;
-        
-        if (error) {
-          console.error('Error fetching profile:', error);
-          setLoading(false);
-          return;
-        }
-        
-        console.log('Profile loaded:', profile);
-        setProfile(profile);
-      } catch (error) {
-        console.error('Error in profile fetch try/catch:', error);
+        console.error('Error getting initial session:', error);
+        setLoading(false);
       } finally {
-        // Always ensure loading is set to false after profile fetch attempt
-        if (isMounted) {
-          console.log('Setting loading to false in fetchUserProfile finally block');
-          setLoading(false);
-        }
+        setAuthInitialized(true);
       }
     };
 
-    fetchSession();
+    fetchInitialSession();
 
     return () => {
       console.log('Cleaning up auth effect');
-      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
+  const fetchUserProfile = async (userId: string) => {
+    console.log('Fetching profile for user:', userId);
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching profile:', error);
+        toast.error('Failed to load user profile');
+      } else {
+        console.log('Profile loaded successfully:', profile);
+        setProfile(profile);
+      }
+    } catch (error) {
+      console.error('Exception in profile fetch:', error);
+      toast.error('An error occurred while loading your profile');
+    } finally {
+      // Always ensure loading is set to false after profile fetch
+      console.log('Setting loading to false after profile fetch');
+      setLoading(false);
+    }
+  };
+
   // For debugging - log state changes
   useEffect(() => {
-    console.log('Auth state:', { loading, user: !!user, profile: !!profile });
-  }, [loading, user, profile]);
+    console.log('Auth state updated:', { 
+      loading, 
+      authInitialized,
+      user: user ? `${user.id.substring(0, 8)}...` : 'null', 
+      profile: profile ? `${profile.username} (${profile.credits} credits)` : 'null' 
+    });
+  }, [loading, authInitialized, user, profile]);
 
   const signUp = async (email: string, password: string, username: string) => {
     const { error } = await supabase.auth.signUp({
@@ -188,8 +204,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(prev => prev ? { ...prev, credits: newCreditsAmount } : null);
   };
 
-  // Use our reusable Loading component
-  if (loading) {
+  // Use our reusable Loading component for consistent loading UI
+  if (loading && !authInitialized) {
     return <Loading size="lg" text="Loading user data..." className="h-screen" />;
   }
 
