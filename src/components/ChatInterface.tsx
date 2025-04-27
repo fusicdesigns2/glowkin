@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useChat } from '@/contexts/ChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingScreen from './LoadingScreen';
+import VoiceInput from './VoiceInput';
 import { getActiveModelCost, calculateTokenCosts } from '@/utils/chatUtils';
 import { ModelCost } from '@/types/chat';
 import ReactMarkdown from 'react-markdown';
@@ -74,6 +74,10 @@ export default function ChatInterface() {
       await sendMessage(message.trim(), estimatedCost, selectedModel);
     }
     setMessage('');
+  };
+
+  const handleVoiceInput = (transcription: string) => {
+    setMessage(transcription);
   };
 
   if (!user) {
@@ -183,12 +187,18 @@ export default function ChatInterface() {
 
       <div className="p-4 bg-[#403E43] border-t border-gray-700">
         <form onSubmit={handleSendMessage} className="flex flex-col space-y-2">
-          <Textarea
-            placeholder="Ask your question..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            className="min-h-[100px] resize-none bg-white text-black border-gray-700 focus:ring-white/20" 
-          />
+          <div className="flex items-start gap-2">
+            <Textarea
+              placeholder="Ask your question..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="min-h-[100px] resize-none bg-white text-black border-gray-700 focus:ring-white/20"
+            />
+            <VoiceInput
+              onTranscription={handleVoiceInput}
+              disabled={isLoading}
+            />
+          </div>
           
           <div className="flex justify-between items-center">
             <div className="text-sm space-y-1">
