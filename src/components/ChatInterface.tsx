@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useChat } from '@/contexts/ChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingScreen from './LoadingScreen';
@@ -81,8 +82,18 @@ export default function ChatInterface() {
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{msg.content}</p>
-                  <div className={`text-xs mt-1 ${msg.role === 'user' ? 'text-red-100' : 'text-gray-500'}`}>
-                    {new Date(msg.timestamp).toLocaleTimeString()}
+                  <div className={`text-xs mt-1 flex items-center gap-2 ${msg.role === 'user' ? 'text-red-100' : 'text-gray-500'}`}>
+                    {msg.role === 'assistant' && (
+                      <>
+                        <Badge variant="secondary" className="text-xs">
+                          {msg.model || 'unknown model'}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {msg.tokens_used || 0} tokens
+                        </Badge>
+                      </>
+                    )}
+                    <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
                   </div>
                 </div>
               </div>
