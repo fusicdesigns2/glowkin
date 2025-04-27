@@ -39,19 +39,23 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
     const checkConsent = async () => {
       if (!user) return;
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('whisper_consent')
-        .eq('id', user.id)
-        .single();
-      
-      if (error) {
-        console.error('Error checking consent:', error);
-        return;
-      }
-      
-      if (!data.whisper_consent) {
-        setShowConsent(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('whisper_consent')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) {
+          console.error('Error checking consent:', error);
+          return;
+        }
+        
+        if (data && !data.whisper_consent) {
+          setShowConsent(true);
+        }
+      } catch (error) {
+        console.error('Failed to check consent status:', error);
       }
     };
     
@@ -61,28 +65,32 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
   const handleConsent = async (consent: boolean) => {
     if (!user) return;
     
-    const { error } = await supabase
-      .from('profiles')
-      .update({ 
-        whisper_consent: true,
-        whisper_consent_date: consent ? new Date().toISOString() : null
-      })
-      .eq('id', user.id);
-    
-    if (error) {
-      console.error('Error saving consent:', error);
-      toast({
-        title: "Error",
-        description: "Could not save your preference. Please try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setShowConsent(false);
-    
-    if (consent) {
-      initiateCountdown();
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          whisper_consent: true,
+          whisper_consent_date: consent ? new Date().toISOString() : null
+        })
+        .eq('id', user.id);
+      
+      if (error) {
+        console.error('Error saving consent:', error);
+        toast({
+          title: "Error",
+          description: "Could not save your preference. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      setShowConsent(false);
+      
+      if (consent) {
+        initiateCountdown();
+      }
+    } catch (error) {
+      console.error('Failed to save consent:', error);
     }
   };
 
@@ -225,19 +233,33 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
         return;
       }
       
-      const { data } = supabase
-        .from('profiles')
-        .select('whisper_consent')
-        .eq('id', user.id)
-        .single();
-      
-      data.then(result => {
-        if (result && result.whisper_consent) {
-          initiateCountdown();
-        } else {
-          setShowConsent(true);
-        }
-      }).catch(() => setShowConsent(true));
+      try {
+        supabase
+          .from('profiles')
+          .select('whisper_consent')
+          .eq('id', user.id)
+          .single()
+          .then(({ data, error }) => {
+            if (error) {
+              console.error('Error checking consent:', error);
+              setShowConsent(true);
+              return;
+            }
+            
+            if (data && data.whisper_consent) {
+              initiateCountdown();
+            } else {
+              setShowConsent(true);
+            }
+          })
+          .catch(error => {
+            console.error('Failed to check consent status:', error);
+            setShowConsent(true);
+          });
+      } catch (error) {
+        console.error('Error checking consent:', error);
+        setShowConsent(true);
+      }
     }
   };
 

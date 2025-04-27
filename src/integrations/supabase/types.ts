@@ -127,6 +127,7 @@ export type Database = {
           markup: number
           model: string
           out_cost: number
+          PerUnit: string | null
           predicted_avg_in_words: number | null
           predicted_avg_out_words: number | null
           predicted_cost: number | null
@@ -140,6 +141,7 @@ export type Database = {
           markup: number
           model: string
           out_cost: number
+          PerUnit?: string | null
           predicted_avg_in_words?: number | null
           predicted_avg_out_words?: number | null
           predicted_cost?: number | null
@@ -153,6 +155,7 @@ export type Database = {
           markup?: number
           model?: string
           out_cost?: number
+          PerUnit?: string | null
           predicted_avg_in_words?: number | null
           predicted_avg_out_words?: number | null
           predicted_cost?: number | null
@@ -168,6 +171,8 @@ export type Database = {
           id: string
           updated_at: string
           username: string | null
+          whisper_consent: boolean | null
+          whisper_consent_date: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -176,6 +181,8 @@ export type Database = {
           id: string
           updated_at?: string
           username?: string | null
+          whisper_consent?: boolean | null
+          whisper_consent_date?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -184,6 +191,8 @@ export type Database = {
           id?: string
           updated_at?: string
           username?: string | null
+          whisper_consent?: boolean | null
+          whisper_consent_date?: string | null
         }
         Relationships: []
       }
