@@ -15,7 +15,13 @@ import { useActiveModels } from '@/hooks/useActiveModels';
 import { useCostPrediction } from '@/hooks/useCostPrediction';
 
 export default function ChatInterface() {
-  const { currentThread, sendMessage, isLoading, getMessageCostEstimate } = useChat();
+  const { 
+    currentThread, 
+    sendMessage, 
+    isLoading, 
+    getMessageCostEstimate,
+    setSelectedModel 
+  } = useChat();
   const { user, profile } = useAuth();
   const [message, setMessage] = useState('');
   const [estimatedCost, setEstimatedCost] = useState(0);

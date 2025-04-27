@@ -34,6 +34,7 @@ interface ChatContextType {
   currentFunFact: string;
   refreshFunFact: () => void;
   updateThreadInList: (threadId: string, updates: Partial<Thread>) => void;
+  setSelectedModel: (model: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -46,6 +47,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [funFacts] = useState<string[]>(funFactsArray);
   const [currentFunFact, setCurrentFunFact] = useState<string>(funFactsArray[0]);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>('');
 
   useEffect(() => {
     if (!user) {
@@ -308,7 +310,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     funFacts,
     currentFunFact,
     refreshFunFact,
-    updateThreadInList
+    updateThreadInList,
+    setSelectedModel
   };
 
   return (

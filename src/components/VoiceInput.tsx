@@ -1,10 +1,10 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useChat } from '@/contexts/ChatContext';
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,7 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
   const audioChunks = useRef<Blob[]>([]);
   const { toast } = useToast();
   const { user, profile } = useAuth();
+  const { sendMessage } = useChat();
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -159,7 +160,6 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
           if (typeof reader.result === 'string') {
             const base64Audio = reader.result.split(',')[1];
             try {
-              // Get model cost data - handle case when no data is found
               let estimatedCost = 0;
               let secondsUsed = Math.ceil(recordingTime / 1000);
               
@@ -174,13 +174,11 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
                 if (!modelError && modelData) {
                   estimatedCost = (modelData.in_cost * secondsUsed * (modelData.markup || 1));
                 } else {
-                  // Default fallback cost if no model data found
                   estimatedCost = 0.01 * secondsUsed;
                   console.log('Using default cost estimation:', estimatedCost);
                 }
               } catch (err) {
                 console.error('Error getting model cost:', err);
-                // Default fallback cost
                 estimatedCost = 0.01 * secondsUsed;
               }
               
@@ -258,6 +256,8 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
         title: "Processing",
         description: "Converting your speech to text...",
       });
+
+      sendMessage.setSelectedModel('gpt-4o-mini');
     }
   };
 
