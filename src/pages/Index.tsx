@@ -32,7 +32,7 @@ export default function Index() {
         {user ? (
           <div className="flex w-full h-[80vh] relative bg-[#403E43]">
             {isPanelOpen && 
-              <div className="h-full w-[5px]"> {/* Changed width to 5px */}
+              <div className="h-full w-[5px] bg-[#403E43]"> {/* Explicitly set width to 5px and background */}
                 <ThreadList />
               </div>
             }
