@@ -1,15 +1,20 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import Header from '@/components/Header';
 import ChatInterface from '@/components/ChatInterface';
 import ThreadList from '@/components/ThreadList';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loading } from '@/components/ui/loading';
+import { Button } from '@/components/ui/button';
+import { Menu, X } from 'lucide-react';
 
 export default function Index() {
   const { user, isLoading } = useAuth();
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
 
-  console.log('Index page rendered:', { user: !!user, isLoading });
+  const togglePanel = () => {
+    setIsPanelOpen(!isPanelOpen);
+  };
 
   if (isLoading) {
     return (
@@ -25,9 +30,17 @@ export default function Index() {
       
       <main className="flex-grow flex">
         {user ? (
-          <div className="flex w-full">
-            <ThreadList />
-            <div className="flex-grow">
+          <div className="flex w-full relative">
+            {isPanelOpen && <ThreadList />}
+            <Button 
+              onClick={togglePanel} 
+              variant="ghost" 
+              size="icon" 
+              className="absolute top-2 left-2 z-50 bg-[#403E43] text-white hover:bg-[#403E43]/80"
+            >
+              {isPanelOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </Button>
+            <div className={`flex-grow transition-all duration-300 ${isPanelOpen ? 'ml-64' : 'ml-0'}`}>
               <ChatInterface />
             </div>
           </div>

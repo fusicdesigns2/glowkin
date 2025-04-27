@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,7 +13,7 @@ import ReactMarkdown from 'react-markdown';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useActiveModels } from '@/hooks/useActiveModels';
 import { useCostPrediction } from '@/hooks/useCostPrediction';
-import { Menu } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 export default function ChatInterface() {
   const { currentThread, sendMessage, isLoading, getMessageCostEstimate } = useChat();
@@ -181,7 +182,7 @@ export default function ChatInterface() {
       </div>
 
       <div className="p-4 bg-[#403E43]">
-        <form onSubmit={handleSendMessage} className="flex flex-col space-y-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <form onSubmit={handleSendMessage} className="flex flex-col space-y-2">
           <Textarea
             placeholder="Ask your question..."
             value={message}
