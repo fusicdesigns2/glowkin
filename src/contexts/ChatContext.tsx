@@ -123,7 +123,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       setCurrentThread(updatedThread);
       
-      await saveMessage(updatedThread.id, 'user', content, 'user-message', 0);
+      // Updated to match new saveMessage signature with input and output tokens
+      await saveMessage(updatedThread.id, 'user', content, 'user-message', 0, 0);
 
       const response = await sendChatMessage(updatedThread.messages);
       
@@ -132,9 +133,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
-      const { content: aiResponse, tokensUsed, model } = response;
+      // Updated to use the new property names
+      const { content: aiResponse, input_tokens, output_tokens, model } = response;
       
-      await saveMessage(updatedThread.id, 'assistant', aiResponse, model, tokensUsed);
+      // Updated to match new saveMessage signature with input and output tokens
+      await saveMessage(updatedThread.id, 'assistant', aiResponse, model, input_tokens, output_tokens);
 
       const aiMessage: ChatMessage = {
         id: `msg_${Date.now() + 1}`,
@@ -142,7 +145,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         content: aiResponse,
         timestamp: new Date(),
         model: model,
-        tokens_used: tokensUsed
+        input_tokens: input_tokens,
+        output_tokens: output_tokens
       };
 
       const finalThread = {
