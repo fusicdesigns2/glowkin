@@ -27,13 +27,13 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const { user, profile, updateCredits } = useAuth();
+  const { user, profile, updateCredits, isLoading: authLoading } = useAuth();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [currentThread, setCurrentThread] = useState<Thread | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [funFacts] = useState<string[]>(funFactsArray);
   const [currentFunFact, setCurrentFunFact] = useState<string>(funFactsArray[0]);
-
+  
   useEffect(() => {
     if (!user) {
       setThreads([]);
@@ -140,6 +140,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     } catch (error) {
       toast.error('Failed to get response: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      console.error('Chat error:', error);
     } finally {
       setIsLoading(false);
     }

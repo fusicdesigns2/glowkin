@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +20,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateCredits: (newCreditsAmount: number) => Promise<void>;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,12 +48,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setProfile(null);
         }
+        
+        // Ensure loading is set to false after auth state change
+        setLoading(false);
       }
     );
 
+    // Initialize auth state
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
       if (session?.user) {
         supabase
           .from('profiles')
@@ -60,6 +67,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .single()
           .then(({ data }) => {
             setProfile(data);
+            setLoading(false);
+          })
+          .catch(error => {
+            console.error('Error fetching profile:', error);
             setLoading(false);
           });
       } else {
@@ -136,7 +147,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div className="flex items-center justify-center h-screen">
+      <div className="w-16 h-16 border-4 border-maiRed border-t-transparent rounded-full animate-spin"></div>
+    </div>;
   }
 
   return (
@@ -149,6 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signOut,
         updateCredits,
+        isLoading: loading
       }}
     >
       {children}
