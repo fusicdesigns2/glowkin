@@ -29,6 +29,7 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordingInterval, setRecordingInterval] = useState<NodeJS.Timeout | null>(null);
   const [hasCheckedConsent, setHasCheckedConsent] = useState(false);
+  const [showMicPermission, setShowMicPermission] = useState(false);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
   const { toast } = useToast();
@@ -91,7 +92,7 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
       setShowConsent(false);
       
       if (consent) {
-        initiateCountdown();
+        requestMicrophonePermission();
       }
     } catch (error) {
       console.error('Failed to save consent:', error);
@@ -100,6 +101,28 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
         description: "Could not save your preference. Please try again.",
         variant: "destructive"
       });
+    }
+  };
+
+  const requestMicrophonePermission = async () => {
+    setShowMicPermission(true);
+  };
+
+  const handleMicrophonePermission = async (granted: boolean) => {
+    setShowMicPermission(false);
+    if (granted) {
+      try {
+        // Request microphone access
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        initiateCountdown();
+      } catch (error) {
+        console.error('Error accessing microphone:', error);
+        toast({
+          title: "Error",
+          description: "Could not access microphone. Please check your permissions.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -170,6 +193,9 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
                     input_tokens: 0,
                     output_tokens: 0,
                     credit_cost: Math.ceil(estimatedCost)
+                  })
+                  .then(() => {
+                    // Success case handled silently
                   })
                   .catch(err => {
                     console.error('Failed to log transcription usage:', err);
@@ -265,7 +291,7 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
       }
       
       if (data && data.whisper_consent) {
-        initiateCountdown();
+        requestMicrophonePermission();
       } else {
         setShowConsent(true);
       }
@@ -297,6 +323,27 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
           </Button>
           <Button onClick={() => handleConsent(true)}>
             That's cool with me
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const MicrophonePermissionDialog = () => (
+    <Dialog open={showMicPermission} onOpenChange={setShowMicPermission}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Microphone access needed</DialogTitle>
+          <DialogDescription>
+            We need permission to use your microphone for voice recording. Please allow access when prompted.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => handleMicrophonePermission(false)}>
+            Cancel
+          </Button>
+          <Button onClick={() => handleMicrophonePermission(true)}>
+            Continue
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -341,6 +388,7 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
       )}
       
       <ConsentDialog />
+      <MicrophonePermissionDialog />
       <CountdownOverlay />
     </>
   );
