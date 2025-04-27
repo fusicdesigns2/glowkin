@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -120,7 +121,7 @@ export default function ChatInterface() {
                   <div 
                     className={`max-w-[80%] p-3 rounded-lg ${
                       msg.role === 'user' 
-                        ? 'bg-[#0000FF]/50 text-white font-bold rounded-tr-none' 
+                        ? 'bg-sidebar-accent text-black rounded-tr-none' 
                         : 'bg-white border border-gray-200 rounded-tl-none shadow-sm'
                     }`}
                   >
@@ -128,7 +129,7 @@ export default function ChatInterface() {
                       className="prose prose-sm max-w-none" 
                       components={{
                         p: ({node, ...props}) => (
-                          <p className={`my-4 ${msg.role === 'user' ? 'font-bold text-white' : ''}`} {...props} />
+                          <p className={`my-4 ${msg.role === 'user' ? 'text-black' : ''}`} {...props} />
                         ),
                         img: ({node, ...props}) => (
                           <img 
