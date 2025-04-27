@@ -25,7 +25,7 @@ export default function LoadingScreen() {
         
         <div className="bg-white p-4 rounded-lg shadow-sm border border-amber-200">
           <h4 className="text-maiGold font-bold mb-2 text-sm">FUN FACT</h4>
-          <p className="text-maiDarkText animate-pulse-slow">{currentFunFact}</p>
+          <p className="text-maiDarkText">{currentFunFact}</p>
         </div>
       </div>
     </div>

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
@@ -59,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
+    // THEN check for existing session
     const fetchSession = async () => {
       try {
         const { data } = await supabase.auth.getSession();
@@ -83,6 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('Error getting session:', error);
       } finally {
+        // Always set loading to false even if errors occur
         setLoading(false);
       }
     };
@@ -157,6 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(prev => prev ? { ...prev, credits: newCreditsAmount } : null);
   };
 
+  // Only show loading spinner if we're still loading
   if (loading) {
     return <div className="flex items-center justify-center h-screen">
       <div className="w-16 h-16 border-4 border-maiRed border-t-transparent rounded-full animate-spin"></div>
