@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,69 +33,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('AuthProvider effect running');
+    let isMounted = true; // Flag to prevent state updates after unmount
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        if (!isMounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          try {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-            
-            setProfile(profile);
-          } catch (error) {
-            console.error('Error fetching profile:', error);
-          } finally {
-            setLoading(false);
-          }
+          // Don't block the auth state change, fetch profile separately
+          fetchUserProfile(session.user.id);
         } else {
           setProfile(null);
-          setLoading(false);
+          if (!loading) setLoading(false);
         }
       }
     );
 
     // THEN check for existing session
     const fetchSession = async () => {
+      console.log('Fetching existing session');
       try {
         const { data } = await supabase.auth.getSession();
         const session = data.session;
+        
+        if (!isMounted) return;
         
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          try {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-            
-            setProfile(profile);
-          } catch (error) {
-            console.error('Error fetching profile:', error);
-          }
+          await fetchUserProfile(session.user.id);
         }
       } catch (error) {
         console.error('Error getting session:', error);
       } finally {
-        // Always set loading to false even if errors occur
-        setLoading(false);
+        if (isMounted) {
+          console.log('Setting loading to false');
+          setLoading(false);
+        }
+      }
+    };
+
+    const fetchUserProfile = async (userId: string) => {
+      try {
+        console.log('Fetching profile for user:', userId);
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        
+        if (error) throw error;
+        
+        if (isMounted) {
+          console.log('Profile loaded:', profile);
+          setProfile(profile);
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        // Even if profile fetch fails, we should not be in a loading state
+        if (isMounted && loading) {
+          setLoading(false);
+        }
       }
     };
 
     fetchSession();
 
     return () => {
+      console.log('Cleaning up auth effect');
+      isMounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [loading]);
 
   const signUp = async (email: string, password: string, username: string) => {
     const { error } = await supabase.auth.signUp({
@@ -159,10 +176,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(prev => prev ? { ...prev, credits: newCreditsAmount } : null);
   };
 
+  console.log('Auth state:', { loading, user: !!user, profile: !!profile });
+
   // Only show loading spinner if we're still loading
   if (loading) {
     return <div className="flex items-center justify-center h-screen">
       <div className="w-16 h-16 border-4 border-maiRed border-t-transparent rounded-full animate-spin"></div>
+      <div className="ml-4 text-maiDarkText">Loading user data...</div>
     </div>;
   }
 
