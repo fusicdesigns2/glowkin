@@ -30,8 +30,12 @@ export default function Index() {
       
       <main className="flex-grow flex">
         {user ? (
-          <div className="flex w-full relative">
-            {isPanelOpen && <ThreadList />}
+          <div className="flex w-full h-[80vh] relative bg-[#403E43]">
+            {isPanelOpen && 
+              <div className="h-full">
+                <ThreadList />
+              </div>
+            }
             <Button 
               onClick={togglePanel} 
               variant="ghost" 
@@ -40,7 +44,7 @@ export default function Index() {
             >
               {isPanelOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
-            <div className={`flex-grow transition-all duration-300 ${isPanelOpen ? 'ml-64' : 'ml-0'} bg-[#403E43]`}>
+            <div className={`flex-grow ${isPanelOpen ? 'ml-64' : 'ml-0'} transition-all duration-300`}>
               <ChatInterface />
             </div>
           </div>

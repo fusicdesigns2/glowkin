@@ -103,9 +103,9 @@ export default function ChatInterface() {
   }
 
   return (
-    <div className="flex flex-col h-[80vh]">
-      <div className="flex-grow overflow-auto p-4 bg-[#0000FF]/5">
-        <div className="flex-grow pr-5">
+    <div className="flex flex-col h-full">
+      <div className="flex-grow overflow-auto p-4 bg-[#403E43]">
+        <div className="flex-grow">
           {currentThread?.messages && currentThread.messages.length > 0 ? (
             <div className="space-y-4">
               {currentThread.messages.map((msg) => (
@@ -170,7 +170,7 @@ export default function ChatInterface() {
               <div ref={messagesEndRef} />
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
+            <div className="flex flex-col items-center justify-center h-full text-center text-gray-300">
               <h3 className="text-xl font-semibold mb-2">Welcome to Mai Mai!</h3>
               <p className="mb-4">Ask me anything, and I'll do my best to help.</p>
               <p className="text-sm">You have {profile?.credits} credits available</p>
@@ -179,7 +179,7 @@ export default function ChatInterface() {
         </div>
       </div>
 
-      <div className="p-4 bg-[#403E43]">
+      <div className="p-4 bg-[#403E43] border-t border-gray-700">
         <form onSubmit={handleSendMessage} className="flex flex-col space-y-2">
           <Textarea
             placeholder="Ask your question..."
