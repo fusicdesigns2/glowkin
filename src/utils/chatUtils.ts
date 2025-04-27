@@ -1,6 +1,5 @@
-
-import { Thread, ChatMessage, ThreadMessage, ModelCost } from '@/types/chat';
 import { supabase } from '@/integrations/supabase/client';
+import { Thread, ChatMessage, ThreadMessage, ModelCost } from '@/types/chat';
 
 export const getMessageCostEstimate = (content: string): number => {
   const charCount = content.length;
@@ -177,7 +176,7 @@ export const sendChatMessage = async (messages: ChatMessage[], generateImage: bo
     const messageContent = response.data.choices[0]?.message?.content;
     const inputTokens = response.data.usage?.prompt_tokens || 0;
     const outputTokens = response.data.usage?.completion_tokens || 0;
-    const model = response.data.model || 'gpt-4o-mini';
+    const model = response.data.model || 'gpt-4.1-mini-2025-04-14';
 
     return {
       content: messageContent,
