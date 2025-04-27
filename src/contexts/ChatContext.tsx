@@ -1,7 +1,16 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useAuth } from './AuthContext';
+import React, { createContext, useContext, useState } from 'react';
 import { toast } from 'sonner';
 import { Thread, ChatMessage } from '@/types/chat';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+import { useAuth } from './AuthContext';
 import { funFactsArray } from '@/data/funFacts';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -36,7 +45,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [funFacts] = useState<string[]>(funFactsArray);
   const [currentFunFact, setCurrentFunFact] = useState<string>(funFactsArray[0]);
-  
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<{ prompt: string; error: string } | null>(null);
+
   useEffect(() => {
     if (!user) {
       setThreads([]);
@@ -174,9 +185,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        if ('error' in imageResponse) {
+          setErrorDetails({
+            prompt: content,
+            error: imageResponse.error
+          });
+          setErrorDialogOpen(true);
+          return;
+        }
+
         const { url: imageUrl, model } = imageResponse;
 
-        // Save the image to our database
         const { data: imageData } = await supabase
           .from('chat_images')
           .insert({
@@ -296,6 +315,28 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   return (
     <ChatContext.Provider value={value}>
       {children}
+      <AlertDialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Image Generation Error</AlertDialogTitle>
+            <AlertDialogDescription>
+              <div className="space-y-2">
+                <p>Failed to generate image with the following prompt:</p>
+                <pre className="bg-muted p-2 rounded-md whitespace-pre-wrap">
+                  {errorDetails?.prompt}
+                </pre>
+                <p className="font-medium mt-4">Error message:</p>
+                <pre className="bg-muted p-2 rounded-md text-red-500 whitespace-pre-wrap">
+                  {errorDetails?.error}
+                </pre>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ChatContext.Provider>
   );
 }
