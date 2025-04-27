@@ -1,4 +1,3 @@
-
 import { Thread, ChatMessage, ThreadMessage, ModelCost } from '@/types/chat';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -35,6 +34,11 @@ export const saveMessage = async (
     throw new Error(`Invalid thread ID format: ${threadId}`);
   }
 
+  const activeModelCost = await getActiveModelCost(model);
+  const creditCost = activeModelCost ? 
+    Math.ceil((inputTokens * activeModelCost.in_cost + outputTokens * activeModelCost.out_cost) * activeModelCost.markup * 100) : 
+    0;
+
   const { error } = await supabase
     .from('chat_messages')
     .insert({
@@ -44,7 +48,8 @@ export const saveMessage = async (
       model,
       input_tokens: inputTokens,
       output_tokens: outputTokens,
-      "10x_cost": tenXCost
+      "10x_cost": tenXCost,
+      credit_cost: creditCost
     });
 
   if (error) throw error;

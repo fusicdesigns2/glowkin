@@ -6,7 +6,8 @@ export interface ChatMessage {
   model?: string;
   input_tokens?: number;
   output_tokens?: number;
-  tenXCost?: number; // Added 10x_cost field
+  tenXCost?: number;
+  credit_cost?: number;
 }
 
 export interface ThreadMessage {
@@ -16,7 +17,7 @@ export interface ThreadMessage {
   content: string;
   model: string;
   tokens_used: number;
-  "10x_cost"?: number; // Added 10x_cost field
+  "10x_cost"?: number;
   created_at: Date;
 }
 

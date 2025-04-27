@@ -14,6 +14,7 @@ export type Database = {
           "10x_cost": number
           content: string
           created_at: string | null
+          credit_cost: number
           id: string
           input_tokens: number
           model: string
@@ -25,6 +26,7 @@ export type Database = {
           "10x_cost"?: number
           content: string
           created_at?: string | null
+          credit_cost?: number
           id?: string
           input_tokens?: number
           model: string
@@ -36,6 +38,7 @@ export type Database = {
           "10x_cost"?: number
           content?: string
           created_at?: string | null
+          credit_cost?: number
           id?: string
           input_tokens?: number
           model?: string
