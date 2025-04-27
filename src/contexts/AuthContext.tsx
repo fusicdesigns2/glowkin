@@ -1,8 +1,10 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Loading } from '@/components/ui/loading';
 
 interface UserProfile {
   id: string;
@@ -37,16 +39,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
         if (!isMounted) return;
         
         setSession(session);
         setUser(session?.user ?? null);
 
+        // If session exists, fetch user profile, but don't await here
         if (session?.user) {
-          // Don't block the auth state change, fetch profile separately
-          fetchUserProfile(session.user.id);
+          // Use setTimeout to prevent potential deadlocks
+          setTimeout(() => {
+            fetchUserProfile(session.user.id);
+          }, 0);
         } else {
           setProfile(null);
         }
@@ -58,23 +63,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Fetching existing session');
       try {
         const { data } = await supabase.auth.getSession();
-        const session = data.session;
-        
         if (!isMounted) return;
         
+        const session = data.session;
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
           await fetchUserProfile(session.user.id);
+        } else {
+          // Even if there's no session, we should exit loading state
+          setLoading(false);
         }
       } catch (error) {
         console.error('Error getting session:', error);
-      } finally {
-        if (isMounted) {
-          console.log('Setting loading to false in fetchSession finally block');
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
@@ -87,17 +90,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq('id', userId)
           .single();
         
-        if (error) throw error;
+        if (!isMounted) return;
         
-        if (isMounted) {
-          console.log('Profile loaded:', profile);
-          setProfile(profile);
+        if (error) {
+          console.error('Error fetching profile:', error);
+          setLoading(false);
+          return;
         }
+        
+        console.log('Profile loaded:', profile);
+        setProfile(profile);
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.error('Error in profile fetch try/catch:', error);
       } finally {
-        // Always ensure loading is set to false after profile fetch completes
-        if (isMounted && loading) {
+        // Always ensure loading is set to false after profile fetch attempt
+        if (isMounted) {
           console.log('Setting loading to false in fetchUserProfile finally block');
           setLoading(false);
         }
@@ -112,6 +119,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  // For debugging - log state changes
+  useEffect(() => {
+    console.log('Auth state:', { loading, user: !!user, profile: !!profile });
+  }, [loading, user, profile]);
 
   const signUp = async (email: string, password: string, username: string) => {
     const { error } = await supabase.auth.signUp({
@@ -176,14 +188,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(prev => prev ? { ...prev, credits: newCreditsAmount } : null);
   };
 
-  console.log('Auth state:', { loading, user: !!user, profile: !!profile });
-
-  // Only show loading spinner if we're still loading
+  // Use our reusable Loading component
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="w-16 h-16 border-4 border-maiRed border-t-transparent rounded-full animate-spin"></div>
-      <div className="ml-4 text-maiDarkText">Loading user data...</div>
-    </div>;
+    return <Loading size="lg" text="Loading user data..." className="h-screen" />;
   }
 
   return (

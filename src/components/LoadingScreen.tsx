@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { useChat } from '@/contexts/ChatContext';
+import { Loading } from '@/components/ui/loading';
 
 export default function LoadingScreen() {
   const { currentFunFact, refreshFunFact } = useChat();
@@ -18,7 +19,7 @@ export default function LoadingScreen() {
     <div className="flex flex-col items-center justify-center h-[80vh] bg-maiFunFactBg">
       <div className="text-center max-w-md p-6">
         <div className="mb-8">
-          <div className="w-16 h-16 border-4 border-maiRed border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <Loading size="lg" />
         </div>
         
         <h3 className="text-xl font-semibold mb-4 font-poppins">Thinking...</h3>

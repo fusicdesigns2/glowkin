@@ -4,19 +4,19 @@ import Header from '@/components/Header';
 import ChatInterface from '@/components/ChatInterface';
 import ThreadList from '@/components/ThreadList';
 import { useAuth } from '@/contexts/AuthContext';
+import { Loading } from '@/components/ui/loading';
 
 export default function Index() {
   const { user, isLoading } = useAuth();
 
   useEffect(() => {
-    console.log('Auth state:', { user, isLoading });
+    console.log('Index page - Auth state:', { user, isLoading });
   }, [user, isLoading]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-maiBg flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-maiRed border-t-transparent rounded-full animate-spin"></div>
-        <div className="ml-4 text-maiDarkText">Loading application...</div>
+      <div className="min-h-screen bg-maiBg">
+        <Loading size="lg" text="Loading application..." className="h-screen" />
       </div>
     );
   }
