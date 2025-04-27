@@ -57,8 +57,8 @@ export default function ThreadList() {
   }, [currentThread?.messages[0]?.content]);
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 h-[80vh] flex flex-col">
-      <div className="p-4 border-b">
+    <div className="w-64 bg-[#403E43] text-white border-r border-gray-700 h-[80vh] flex flex-col">
+      <div className="p-4 border-b border-gray-700">
         <Button 
           onClick={createThread} 
           className="w-full bg-maiGold hover:bg-maiGold/80 text-white"
@@ -77,10 +77,10 @@ export default function ThreadList() {
                     <div className="flex items-center justify-between w-full">
                       <Button
                         variant="ghost"
-                        className={`flex-grow justify-start text-left truncate ${
+                        className={`flex-grow justify-start text-left truncate text-white ${
                           currentThread?.id === thread.id 
-                            ? 'bg-gray-100 font-bold' 
-                            : 'hover:bg-maiRed/50'
+                            ? 'bg-[#FFFFFF]/20 font-bold' 
+                            : 'hover:bg-[#FFFFFF]/10'
                         }`}
                         onClick={() => selectThread(thread.id)}
                       >
@@ -92,7 +92,7 @@ export default function ThreadList() {
                           e.stopPropagation();
                           handleTitleClick(thread);
                         }}
-                        className="p-1 hover:bg-maiRed/50 hover:scale-105 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100"
+                        className="p-1 hover:bg-[#FFFFFF]/20 hover:scale-105 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100 text-white"
                         aria-label="Edit thread title"
                       >
                         <Edit className="w-4 h-4" />
@@ -120,7 +120,7 @@ export default function ThreadList() {
                           setEditableThreadId(null);
                         }
                       }}
-                      className="text-sm w-48"
+                      className="text-sm w-48 bg-white text-black"
                       autoFocus
                     />
                   )}
@@ -128,7 +128,7 @@ export default function ThreadList() {
               ))}
             </div>
           ) : (
-            <div className="p-4 text-center text-gray-500 text-sm">
+            <div className="p-4 text-center text-gray-300 text-sm">
               No chat threads yet
             </div>
           )}
