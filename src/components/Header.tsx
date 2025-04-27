@@ -2,6 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { Menu } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,9 +17,17 @@ export default function Header() {
   const { user, profile, signOut } = useAuth();
   
   return (
-    <header className="w-full py-4 px-6 bg-white border-b border-gray-200 flex justify-between items-center">
-      <div className="flex items-center">
-        <h1 className="text-2xl font-bold text-maiRed">Mai Mai</h1>
+    <header className="w-full py-4 px-6 bg-[#403E43] text-white border-b border-gray-200 flex justify-between items-center">
+      <div className="flex items-center gap-2">
+        <Button 
+          variant="ghost" 
+          size="icon"
+          className="text-white"
+          onClick={() => document.documentElement.classList.toggle('hide-sidebar')}
+        >
+          <Menu className="h-6 w-6" />
+        </Button>
+        <h1 className="text-2xl font-bold text-white">Mai Mai</h1>
       </div>
       
       <div className="flex items-center space-x-4">

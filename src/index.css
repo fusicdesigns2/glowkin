@@ -100,3 +100,13 @@
     @apply font-poppins font-semibold;
   }
 }
+
+/* Add styles for sidebar toggle */
+.hide-sidebar [role="complementary"] {
+  display: none;
+}
+
+/* Style toasts with gold color */
+.toaster .toast {
+  background-color: rgba(245, 158, 11, 0.2) !important;
+}

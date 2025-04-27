@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Header from '@/components/Header';
 import ChatInterface from '@/components/ChatInterface';
@@ -19,12 +20,12 @@ export default function Index() {
   }
 
   return (
-    <div className="min-h-screen bg-maiBg">
+    <div className="min-h-screen bg-maiBg flex flex-col">
       <Header />
       
-      <main>
+      <main className="flex-grow flex">
         {user ? (
-          <div className="flex">
+          <div className="flex w-full">
             <ThreadList />
             <div className="flex-grow">
               <ChatInterface />
@@ -108,6 +109,10 @@ export default function Index() {
           </div>
         )}
       </main>
+
+      <footer className="bg-[#403E43] text-white py-4 px-6 text-center">
+        <p>&copy; {new Date().getFullYear()} Mai Mai. All rights reserved.</p>
+      </footer>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +13,7 @@ import ReactMarkdown from 'react-markdown';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useActiveModels } from '@/hooks/useActiveModels';
 import { useCostPrediction } from '@/hooks/useCostPrediction';
+import { Menu } from 'lucide-react';
 
 export default function ChatInterface() {
   const { currentThread, sendMessage, isLoading, getMessageCostEstimate } = useChat();
@@ -103,7 +105,7 @@ export default function ChatInterface() {
 
   return (
     <div className="flex flex-col h-[80vh]">
-      <div className="flex-grow overflow-auto p-4">
+      <div className="flex-grow overflow-auto p-4 bg-[#0000FF]/5">
         {currentThread?.messages && currentThread.messages.length > 0 ? (
           <div className="space-y-4">
             {currentThread.messages.map((msg) => (
@@ -114,7 +116,7 @@ export default function ChatInterface() {
                 <div 
                   className={`max-w-[80%] p-3 rounded-lg ${
                     msg.role === 'user' 
-                      ? 'bg-[#0000FF]/20 text-black font-bold rounded-tr-none' 
+                      ? 'bg-[#0000FF]/50 text-black font-bold rounded-tr-none' 
                       : 'bg-white border border-gray-200 rounded-tl-none shadow-sm'
                   }`}
                 >
@@ -176,13 +178,13 @@ export default function ChatInterface() {
         )}
       </div>
 
-      <div className="p-4 border-t bg-white">
+      <div className="p-4 bg-[#0000FF]/7">
         <form onSubmit={handleSendMessage} className="flex flex-col space-y-2">
           <Textarea
             placeholder="Ask your question..."
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="min-h-[100px] resize-none"
+            className="min-h-[100px] resize-none bg-white"
           />
           
           <div className="flex justify-between items-center">
