@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -181,25 +180,25 @@ export default function ChatInterface() {
         <div className="w-[5px] bg-[#403E43]"></div>
       </div>
 
-      <div className="p-4 bg-[#403E43]"> {/* Changed background to charcoal grey */}
-        <form onSubmit={handleSendMessage} className="flex flex-col space-y-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]"> {/* Added shadow */}
+      <div className="p-4 bg-[#403E43]">
+        <form onSubmit={handleSendMessage} className="flex flex-col space-y-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
           <Textarea
             placeholder="Ask your question..."
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="min-h-[100px] resize-none bg-[#403E43] text-white border-gray-700 focus:ring-white/20" 
+            className="min-h-[100px] resize-none bg-white text-black border-gray-700 focus:ring-white/20" 
           />
           
           <div className="flex justify-between items-center">
             <div className="text-sm space-y-1">
               {estimatedCost > 0 && (
-                <span className={`${profile && profile.credits >= estimatedCost ? 'text-gray-500' : 'text-red-500'}`}>
+                <span className={`${profile && profile.credits >= estimatedCost ? 'text-gray-300' : 'text-red-500'}`}>
                   Estimated cost: <strong>{estimatedCost} credits</strong>
                   {profile && profile.credits < estimatedCost && ' (insufficient credits)'}
                 </span>
               )}
               {predictedCost !== null && (
-                <div className="text-gray-500 text-xs">
+                <div className="text-gray-300 text-xs">
                   Average cost for {selectedModel}: {predictedCost} credits
                   {predictionDate && (
                     <span className="ml-1">
@@ -216,7 +215,7 @@ export default function ChatInterface() {
                 onValueChange={setSelectedModel}
                 disabled={isLoadingModels}
               >
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-[300px] bg-white text-black border-gray-700">
                   <SelectValue placeholder="Select model" />
                 </SelectTrigger>
                 <SelectContent>
