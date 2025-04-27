@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -105,77 +104,80 @@ export default function ChatInterface() {
 
   return (
     <div className="flex flex-col h-[80vh]">
-      <div className="flex-grow overflow-auto p-4 bg-[#0000FF]/5">
-        {currentThread?.messages && currentThread.messages.length > 0 ? (
-          <div className="space-y-4">
-            {currentThread.messages.map((msg) => (
-              <div 
-                key={msg.id} 
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
+      <div className="flex-grow overflow-auto p-4 bg-[#0000FF]/5 flex">
+        <div className="flex-grow pr-5">
+          {currentThread?.messages && currentThread.messages.length > 0 ? (
+            <div className="space-y-4">
+              {currentThread.messages.map((msg) => (
                 <div 
-                  className={`max-w-[80%] p-3 rounded-lg ${
-                    msg.role === 'user' 
-                      ? 'bg-[#0000FF]/50 text-black font-bold rounded-tr-none' 
-                      : 'bg-white border border-gray-200 rounded-tl-none shadow-sm'
-                  }`}
+                  key={msg.id} 
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <ReactMarkdown 
-                    className="prose prose-sm max-w-none" 
-                    components={{
-                      p: ({node, ...props}) => (
-                        <p className="my-4" {...props} />
-                      ),
-                      img: ({node, ...props}) => (
-                        <img 
-                          {...props} 
-                          className="max-w-full rounded-lg shadow-sm" 
-                          alt={props.alt || 'Generated image'} 
-                        />
-                      )
-                    }}
+                  <div 
+                    className={`max-w-[80%] p-3 rounded-lg ${
+                      msg.role === 'user' 
+                        ? 'bg-[#0000FF]/50 text-black font-bold rounded-tr-none' 
+                        : 'bg-white border border-gray-200 rounded-tl-none shadow-sm'
+                    }`}
                   >
-                    {msg.content}
-                  </ReactMarkdown>
-                  
-                  <div className={`text-xs mt-1 flex items-center gap-2 flex-wrap ${
-                    msg.role === 'user' 
-                      ? 'text-black' 
-                      : 'text-gray-500'
-                  }`}>
-                    {msg.role === 'assistant' && (
-                      <>
-                        <Badge variant="secondary" className="text-xs">
-                          {msg.model || 'unknown model'}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          in: {msg.input_tokens || 0} / out: {msg.output_tokens || 0} tokens
-                        </Badge>
-                        {msg.model && modelCosts[msg.model] && (
-                          <Badge variant="outline" className="text-xs">
-                            cost: ${(calculateTokenCosts(
-                              msg.input_tokens || 0,
-                              msg.output_tokens || 0,
-                              modelCosts[msg.model]
-                            )).toFixed(10)}
+                    <ReactMarkdown 
+                      className="prose prose-sm max-w-none" 
+                      components={{
+                        p: ({node, ...props}) => (
+                          <p className="my-4" {...props} />
+                        ),
+                        img: ({node, ...props}) => (
+                          <img 
+                            {...props} 
+                            className="max-w-full rounded-lg shadow-sm" 
+                            alt={props.alt || 'Generated image'} 
+                          />
+                        )
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                    
+                    <div className={`text-xs mt-1 flex items-center gap-2 flex-wrap ${
+                      msg.role === 'user' 
+                        ? 'text-black' 
+                        : 'text-gray-500'
+                    }`}>
+                      {msg.role === 'assistant' && (
+                        <>
+                          <Badge variant="secondary" className="text-xs">
+                            {msg.model || 'unknown model'}
                           </Badge>
-                        )}
-                      </>
-                    )}
-                    <span className="text-black">{new Date(msg.timestamp).toLocaleTimeString()}</span>
+                          <Badge variant="outline" className="text-xs">
+                            in: {msg.input_tokens || 0} / out: {msg.output_tokens || 0} tokens
+                          </Badge>
+                          {msg.model && modelCosts[msg.model] && (
+                            <Badge variant="outline" className="text-xs">
+                              cost: ${(calculateTokenCosts(
+                                msg.input_tokens || 0,
+                                msg.output_tokens || 0,
+                                modelCosts[msg.model]
+                              )).toFixed(10)}
+                            </Badge>
+                          )}
+                        </>
+                      )}
+                      <span className="text-black">{new Date(msg.timestamp).toLocaleTimeString()}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
-            <h3 className="text-xl font-semibold mb-2">Welcome to Mai Mai!</h3>
-            <p className="mb-4">Ask me anything, and I'll do my best to help.</p>
-            <p className="text-sm">You have {profile?.credits} credits available</p>
-          </div>
-        )}
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
+              <h3 className="text-xl font-semibold mb-2">Welcome to Mai Mai!</h3>
+              <p className="mb-4">Ask me anything, and I'll do my best to help.</p>
+              <p className="text-sm">You have {profile?.credits} credits available</p>
+            </div>
+          )}
+        </div>
+        <div className="w-5 bg-[#0000FF]/5 gutter"></div>
       </div>
 
       <div className="p-4 bg-[#0000FF]/7">
