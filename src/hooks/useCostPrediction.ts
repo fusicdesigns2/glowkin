@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ModelCost } from '@/types/chat';
@@ -7,6 +6,11 @@ export const useCostPrediction = (model: string, messageContent: string = '') =>
   const [predictedCost, setPredictedCost] = useState<number | null>(null);
   const [predictionDate, setPredictionDate] = useState<Date | null>(null);
   const [needsUpdate, setNeedsUpdate] = useState(false);
+
+  const formatPredictedCost = (cost: number | null) => {
+    if (cost === null) return null;
+    return Number(cost.toFixed(4)); // Round to 4 decimal places
+  };
 
   useEffect(() => {
     const fetchPrediction = async () => {
@@ -24,7 +28,7 @@ export const useCostPrediction = (model: string, messageContent: string = '') =>
         return;
       }
 
-      setPredictedCost(data.predicted_cost);
+      setPredictedCost(formatPredictedCost(data.predicted_cost));
       setPredictionDate(new Date(data.prediction_date));
 
       // Check if prediction needs update (if prediction_date is not today)
@@ -63,7 +67,7 @@ export const useCostPrediction = (model: string, messageContent: string = '') =>
     const { error: updateError } = await supabase
       .from('model_costs')
       .update({
-        predicted_cost: averageCost,
+        predicted_cost: formatPredictedCost(averageCost),
         prediction_date: new Date().toISOString()
       })
       .eq('model', modelName)
@@ -74,7 +78,7 @@ export const useCostPrediction = (model: string, messageContent: string = '') =>
       return;
     }
 
-    setPredictedCost(averageCost);
+    setPredictedCost(formatPredictedCost(averageCost));
     setPredictionDate(new Date());
     setNeedsUpdate(false);
   };
