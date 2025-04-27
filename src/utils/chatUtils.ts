@@ -78,11 +78,12 @@ export const loadThreadsFromDB = async (userId: string): Promise<Thread[]> => {
       title: thread.title,
       messages: messages.map(msg => ({
         id: msg.id,
-        role: msg.role as 'user' | 'assistant', // Type assertion to ensure compatibility
+        role: msg.role as 'user' | 'assistant',
         content: msg.content,
         timestamp: new Date(msg.created_at),
         model: msg.model,
-        tokens_used: msg.tokens_used
+        input_tokens: msg.input_tokens,
+        output_tokens: msg.output_tokens
       })),
       lastUpdated: new Date(thread.updated_at)
     };

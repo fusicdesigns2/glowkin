@@ -14,28 +14,31 @@ export type Database = {
           content: string
           created_at: string | null
           id: string
+          input_tokens: number
           model: string
+          output_tokens: number
           role: string
           thread_id: string | null
-          tokens_used: number
         }
         Insert: {
           content: string
           created_at?: string | null
           id?: string
+          input_tokens?: number
           model: string
+          output_tokens?: number
           role: string
           thread_id?: string | null
-          tokens_used?: number
         }
         Update: {
           content?: string
           created_at?: string | null
           id?: string
+          input_tokens?: number
           model?: string
+          output_tokens?: number
           role?: string
           thread_id?: string | null
-          tokens_used?: number
         }
         Relationships: [
           {
