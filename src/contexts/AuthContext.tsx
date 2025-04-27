@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -50,7 +49,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           fetchUserProfile(session.user.id);
         } else {
           setProfile(null);
-          if (!loading) setLoading(false);
         }
       }
     );
@@ -74,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Error getting session:', error);
       } finally {
         if (isMounted) {
-          console.log('Setting loading to false');
+          console.log('Setting loading to false in fetchSession finally block');
           setLoading(false);
         }
       }
@@ -97,8 +95,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
-        // Even if profile fetch fails, we should not be in a loading state
+      } finally {
+        // Always ensure loading is set to false after profile fetch completes
         if (isMounted && loading) {
+          console.log('Setting loading to false in fetchUserProfile finally block');
           setLoading(false);
         }
       }
@@ -111,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [loading]);
+  }, []);
 
   const signUp = async (email: string, password: string, username: string) => {
     const { error } = await supabase.auth.signUp({
