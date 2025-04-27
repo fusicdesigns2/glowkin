@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export default function ThreadList() {
-  const { threads, currentThread, selectThread, createThread } = useChat();
+  const { threads, currentThread, selectThread, createThread, updateThreadInList } = useChat();
   const [editableThreadId, setEditableThreadId] = useState<string | null>(null);
   const [editedTitle, setEditedTitle] = useState('');
 
@@ -27,15 +27,8 @@ export default function ThreadList() {
 
       if (error) throw error;
       
-      // Update the local state to reflect the change without needing a reload
-      const updatedThreads = threads.map(t => 
-        t.id === threadId ? { ...t, title: newTitle } : t
-      );
-      
-      // Force the context to update with the new threads array
-      // This is a bit of a hack, but it works since the Chat context
-      // is watching the threads array
-      selectThread(threadId);
+      // Update the thread in the context
+      updateThreadInList(threadId, { title: newTitle });
       
       setEditableThreadId(null);
       toast.success("Thread title updated");

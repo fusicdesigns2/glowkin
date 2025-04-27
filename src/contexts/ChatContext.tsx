@@ -22,6 +22,7 @@ interface ChatContextType {
   funFacts: string[];
   currentFunFact: string;
   refreshFunFact: () => void;
+  updateThreadInList: (threadId: string, updates: Partial<Thread>) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -83,6 +84,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const thread = threads.find(t => t.id === threadId);
     if (thread) {
       setCurrentThread(thread);
+    }
+  };
+
+  const updateThreadInList = (threadId: string, updates: Partial<Thread>) => {
+    const updatedThreads = threads.map(thread => 
+      thread.id === threadId ? { ...thread, ...updates } : thread
+    );
+    
+    setThreads(updatedThreads);
+    
+    if (currentThread && currentThread.id === threadId) {
+      setCurrentThread({ ...currentThread, ...updates });
     }
   };
 
@@ -205,7 +218,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     getMessageCostEstimate,
     funFacts,
     currentFunFact,
-    refreshFunFact
+    refreshFunFact,
+    updateThreadInList
   };
 
   return (
