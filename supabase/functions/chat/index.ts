@@ -32,25 +32,20 @@ serve(async (req) => {
       console.log('Generating image with prompt:', userPrompt);
       
       try {
-        // Truncate the prompt to avoid length issues
-        const maxPromptLength = 1000; // DALL-E has a limit around 1000 chars
-        let truncatedPrompt = userPrompt.slice(0, maxPromptLength);
-        if (truncatedPrompt.length < userPrompt.length) {
-          console.log(`Original prompt was too long (${userPrompt.length} chars), truncated to ${truncatedPrompt.length} chars`);
+        // Clean and truncate the prompt to avoid issues
+        const maxPromptLength = 1000;
+        let sanitizedPrompt = userPrompt.trim().slice(0, maxPromptLength);
+        
+        if (sanitizedPrompt.length < userPrompt.length) {
+          console.log(`Original prompt truncated from ${userPrompt.length} to ${sanitizedPrompt.length} characters`);
         }
         
-        // Basic prompt enhancement for short prompts
-        let enhancedPrompt = truncatedPrompt;
-        if (enhancedPrompt.length < 20) {
-          enhancedPrompt = `A detailed image of ${truncatedPrompt}`;
+        // Simple prompt enhancement if needed
+        if (sanitizedPrompt.length < 10) {
+          sanitizedPrompt = `Create an image of ${sanitizedPrompt}`;
         }
         
-        if (!enhancedPrompt.toLowerCase().includes('style') && 
-            !enhancedPrompt.toLowerCase().includes('detailed')) {
-          enhancedPrompt += ". Detailed, professional style.";
-        }
-        
-        console.log('Enhanced image prompt:', enhancedPrompt);
+        console.log('Sending image request with prompt:', sanitizedPrompt);
         
         const response = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST',
@@ -60,26 +55,27 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             model: "dall-e-3",
-            prompt: enhancedPrompt,
+            prompt: sanitizedPrompt,
             n: 1,
             size: "1024x1024",
             quality: "standard"
           }),
         });
 
-        const imageData = await response.json();
-        
         if (!response.ok) {
-          console.error('OpenAI Image API error:', JSON.stringify(imageData));
+          const errorData = await response.json();
+          console.error('OpenAI Image API error:', JSON.stringify(errorData));
           return new Response(JSON.stringify({ 
-            error: imageData.error?.message || 'Error generating image',
-            errorCode: imageData.error?.code || 'unknown_error' 
+            error: errorData.error?.message || 'Error generating image',
+            errorCode: errorData.error?.code || 'unknown_error' 
           }), {
             status: response.status,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
 
+        const imageData = await response.json();
+        
         if (!imageData.data || !imageData.data[0] || !imageData.data[0].url) {
           console.error('Missing image URL in response:', JSON.stringify(imageData));
           return new Response(JSON.stringify({
