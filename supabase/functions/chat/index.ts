@@ -17,7 +17,13 @@ serve(async (req) => {
     const openAiKey = Deno.env.get('OPENAI_API_KEY')
 
     if (!openAiKey) {
-      throw new Error('OpenAI API key not found')
+      console.error('OpenAI API key not found');
+      return new Response(JSON.stringify({ 
+        error: 'Configuration error: OpenAI API key not found' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     console.log('Processing chat request with messages:', JSON.stringify(messages).substring(0, 100) + '...');
@@ -35,24 +41,42 @@ serve(async (req) => {
       }),
     })
 
+    const responseData = await response.json();
+    
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('OpenAI API error:', errorData);
-      return new Response(JSON.stringify({ error: errorData }), {
+      console.error('OpenAI API error:', responseData);
+      
+      // Handle specific OpenAI error types
+      if (responseData.error?.code === 'insufficient_quota') {
+        return new Response(JSON.stringify({ 
+          error: 'OpenAI API quota exceeded. Please try again later or contact support.',
+          errorCode: 'insufficient_quota'
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      return new Response(JSON.stringify({ 
+        error: responseData.error?.message || 'Error communicating with OpenAI',
+        errorCode: responseData.error?.code || 'unknown_error' 
+      }), {
         status: response.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const data = await response.json()
     console.log('OpenAI response received successfully');
     
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
     console.error('Error in chat function:', error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      errorCode: 'server_error' 
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

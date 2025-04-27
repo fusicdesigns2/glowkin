@@ -109,14 +109,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         timestamp: new Date(),
       };
 
-      const updatedThread = {
-        ...(currentThread as Thread),
-        messages: [...(currentThread?.messages || []), userMessage],
+      // Get the current thread (or create one if needed)
+      const threadToUpdate = currentThread || {
+        id: `thread_${Date.now()}`,
+        title: `New Chat ${threads.length + 1}`,
+        messages: [],
         lastUpdated: new Date(),
       };
 
+      const updatedThread = {
+        ...threadToUpdate,
+        messages: [...threadToUpdate.messages, userMessage],
+        lastUpdated: new Date(),
+      };
+
+      // Update state right away with user message
       setCurrentThread(updatedThread);
-      setThreads(threads.map(t => t.id === updatedThread.id ? updatedThread : t));
+      setThreads(prev => prev.map(t => t.id === updatedThread.id ? updatedThread : t));
 
       // Send message to AI and get response
       const aiResponse = await sendChatMessage(updatedThread.messages);
@@ -135,12 +144,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         lastUpdated: new Date(),
       };
 
-      setCurrentThread(finalThread);
-      setThreads(prev => prev.map(t => t.id === finalThread.id ? finalThread : t));
+      // If this is a quota error, don't deduct credits
+      if (aiResponse.includes('quota exceeded') || aiResponse.includes('Error:')) {
+        toast.error(aiResponse);
+      } else {
+        // Update credits only if the message was sent successfully
+        await updateCredits(profile.credits - estimatedCost);
+        toast.success(`${estimatedCost} credits used for this response`);
+      }
 
-      // Update credits
-      await updateCredits(profile.credits - estimatedCost);
-      toast.success(`${estimatedCost} credits used for this response`);
+      // Update with AI response
+      setCurrentThread(finalThread);
+      setThreads(prev => {
+        const existingIndex = prev.findIndex(t => t.id === finalThread.id);
+        if (existingIndex >= 0) {
+          return prev.map(t => t.id === finalThread.id ? finalThread : t);
+        } else {
+          return [finalThread, ...prev];
+        }
+      });
 
     } catch (error) {
       console.error('Chat error:', error);

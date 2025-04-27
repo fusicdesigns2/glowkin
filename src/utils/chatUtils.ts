@@ -49,29 +49,54 @@ export const sendChatMessage = async (messages: ChatMessage[]) => {
 
     console.log('Edge function response:', response);
 
+    // Handle specific error cases
     if (response.error) {
+      if (response.error.message.includes('quota')) {
+        throw new Error('OpenAI API quota exceeded. Please try again later or add more credits.');
+      }
       throw new Error(response.error.message);
     }
 
-    // Check if the expected data structure exists
+    // Handle error in response data
+    if (response.data?.error) {
+      const errorMessage = response.data.error;
+      const errorCode = response.data.errorCode;
+      
+      if (errorCode === 'insufficient_quota') {
+        throw new Error('OpenAI API quota exceeded. You may need to add more credits to your account.');
+      }
+      
+      throw new Error(errorMessage || 'Error from OpenAI service');
+    }
+
+    // Make sure we have valid response data
     if (!response.data) {
       throw new Error('No data received from the chat service');
     }
 
-    // Check if we got an error message in the response data
-    if (response.data.error) {
-      throw new Error(response.data.error.message || 'Error from OpenAI service');
-    }
-
-    // Handle the case where choices might not exist or be empty
+    // Validate that we have what we need in the data structure
     if (!response.data.choices || !response.data.choices.length) {
       console.warn('No choices returned in the response:', response.data);
       return "I'm sorry, I couldn't generate a response at this time. Please try again later.";
     }
 
-    return response.data.choices[0].message.content;
+    // Safely extract the message content
+    const messageContent = response.data.choices[0]?.message?.content;
+    if (!messageContent) {
+      console.warn('No message content in the response:', response.data);
+      return "I apologize, but I received an empty response. Please try a different question.";
+    }
+
+    return messageContent;
   } catch (error) {
     console.error('Error in sendChatMessage:', error);
-    return `Error: ${error.message}. Please try again later.`;
+    
+    // Return a user-friendly error message
+    const errorMessage = error.message || 'Unknown error';
+    if (errorMessage.includes('quota')) {
+      return `Error: OpenAI API quota exceeded. The AI service is currently unavailable due to quota limitations. Please try again later or contact support.`;
+    }
+    
+    return `Error: ${errorMessage}. Please try again later.`;
   }
 };
