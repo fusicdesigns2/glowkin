@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,8 +29,8 @@ export default function ChatInterface() {
   const [modelCosts, setModelCosts] = useState<Record<string, ModelCost>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { data: activeModels, isLoading: isLoadingModels } = useActiveModels();
-  const { predictedCost, predictionDate } = useCostPrediction(selectedModel, message);
   const [selectedModelState, setSelectedModelState] = useState<string>('');
+  const { predictedCost, predictionDate } = useCostPrediction(selectedModelState, message);
 
   useEffect(() => {
     if (activeModels && activeModels.length > 0) {
