@@ -101,6 +101,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     refreshFunFact();
 
     try {
+      // Create and add user message to thread
       const userMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'user',
@@ -117,10 +118,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setCurrentThread(updatedThread);
       setThreads(threads.map(t => t.id === updatedThread.id ? updatedThread : t));
 
+      // Send message to AI and get response
       const aiResponse = await sendChatMessage(updatedThread.messages);
       
+      // Create AI message and add to thread
       const aiMessage: ChatMessage = {
-        id: `msg_${Date.now()}`,
+        id: `msg_${Date.now() + 1}`,
         role: 'assistant',
         content: aiResponse,
         timestamp: new Date(),
@@ -133,14 +136,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       };
 
       setCurrentThread(finalThread);
-      setThreads(threads.map(t => t.id === finalThread.id ? finalThread : t));
+      setThreads(prev => prev.map(t => t.id === finalThread.id ? finalThread : t));
 
+      // Update credits
       await updateCredits(profile.credits - estimatedCost);
       toast.success(`${estimatedCost} credits used for this response`);
 
     } catch (error) {
-      toast.error('Failed to get response: ' + (error instanceof Error ? error.message : 'Unknown error'));
       console.error('Chat error:', error);
+      toast.error(`Failed to get response: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }

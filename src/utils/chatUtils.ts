@@ -32,21 +32,46 @@ export const saveThreadsToStorage = (userId: string, threads: Thread[]): void =>
 };
 
 export const sendChatMessage = async (messages: ChatMessage[]) => {
-  const response = await supabase.functions.invoke('chat', {
-    body: {
-      messages: [
-        { role: 'system', content: 'You are a helpful AI assistant.' },
-        ...messages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        }))
-      ]
+  try {
+    console.log('Sending chat messages to edge function:', messages);
+    
+    const response = await supabase.functions.invoke('chat', {
+      body: {
+        messages: [
+          { role: 'system', content: 'You are a helpful AI assistant.' },
+          ...messages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }))
+        ]
+      }
+    });
+
+    console.log('Edge function response:', response);
+
+    if (response.error) {
+      throw new Error(response.error.message);
     }
-  });
 
-  if (response.error) {
-    throw new Error(response.error.message);
+    // Check if the expected data structure exists
+    if (!response.data) {
+      throw new Error('No data received from the chat service');
+    }
+
+    // Check if we got an error message in the response data
+    if (response.data.error) {
+      throw new Error(response.data.error.message || 'Error from OpenAI service');
+    }
+
+    // Handle the case where choices might not exist or be empty
+    if (!response.data.choices || !response.data.choices.length) {
+      console.warn('No choices returned in the response:', response.data);
+      return "I'm sorry, I couldn't generate a response at this time. Please try again later.";
+    }
+
+    return response.data.choices[0].message.content;
+  } catch (error) {
+    console.error('Error in sendChatMessage:', error);
+    return `Error: ${error.message}. Please try again later.`;
   }
-
-  return response.data.choices[0].message.content;
 };
