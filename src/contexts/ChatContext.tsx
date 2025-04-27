@@ -46,7 +46,7 @@ const funFactsArray = [
 ];
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const { user, updateCredits } = useAuth();
+  const { user, profile, updateCredits } = useAuth();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [currentThread, setCurrentThread] = useState<Thread | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -124,12 +124,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   const sendMessage = async (content: string, estimatedCost: number) => {
-    if (!user) {
+    if (!user || !profile) {
       toast.error('You need to be logged in to send messages');
       return;
     }
 
-    if (user.credits < estimatedCost) {
+    if (profile.credits < estimatedCost) {
       toast.error(`Not enough credits. You need ${estimatedCost} credits for this message.`);
       return;
     }
@@ -192,7 +192,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setThreads(threads.map(t => t.id === finalThread.id ? finalThread : t));
 
       // Deduct credits
-      updateCredits(user.credits - estimatedCost);
+      await updateCredits(profile.credits - estimatedCost);
       toast.success(`${estimatedCost} credits used for this response`);
 
     } catch (error) {

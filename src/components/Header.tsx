@@ -13,7 +13,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 export default function Header() {
-  const { user, logout } = useAuth();
+  const { user, profile, signOut } = useAuth();
   
   return (
     <header className="w-full py-4 px-6 bg-white border-b border-gray-200 flex justify-between items-center">
@@ -25,14 +25,14 @@ export default function Header() {
         {user ? (
           <>
             <div className="bg-maiFunFactBg text-maiDarkText px-3 py-1 rounded-full text-sm">
-              <span className="font-semibold">{user.credits}</span> credits
+              <span className="font-semibold">{profile?.credits}</span> credits
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative rounded-full h-8 w-8 p-0">
                   <Avatar>
                     <AvatarFallback className="bg-maiBlue text-white">
-                      {user.name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
+                      {profile?.username?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -40,7 +40,7 @@ export default function Header() {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuItem className="flex justify-between">
-                  Credits <span className="font-semibold">{user.credits}</span>
+                  Credits <span className="font-semibold">{profile?.credits}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => window.location.href = "/dashboard"}>
@@ -53,7 +53,7 @@ export default function Header() {
                   Usage Report
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
+                <DropdownMenuItem onClick={signOut}>
                   Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>

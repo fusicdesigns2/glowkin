@@ -9,7 +9,7 @@ import LoadingScreen from './LoadingScreen';
 
 export default function ChatInterface() {
   const { currentThread, sendMessage, isLoading, getMessageCostEstimate } = useChat();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [message, setMessage] = useState('');
   const [estimatedCost, setEstimatedCost] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -31,7 +31,7 @@ export default function ChatInterface() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !user) return;
+    if (!message.trim() || !user || !profile) return;
 
     await sendMessage(message.trim(), estimatedCost);
     setMessage('');
@@ -93,7 +93,7 @@ export default function ChatInterface() {
           <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
             <h3 className="text-xl font-semibold mb-2">Welcome to Mai Mai!</h3>
             <p className="mb-4">Ask me anything, and I'll do my best to help.</p>
-            <p className="text-sm">You have {user.credits} credits available</p>
+            <p className="text-sm">You have {profile?.credits} credits available</p>
           </div>
         )}
       </div>
@@ -110,9 +110,9 @@ export default function ChatInterface() {
           <div className="flex justify-between items-center">
             <div className="text-sm">
               {estimatedCost > 0 && (
-                <span className={`${user.credits >= estimatedCost ? 'text-gray-500' : 'text-red-500'}`}>
+                <span className={`${profile && profile.credits >= estimatedCost ? 'text-gray-500' : 'text-red-500'}`}>
                   Estimated cost: <strong>{estimatedCost} credits</strong>
-                  {user.credits < estimatedCost && ' (insufficient credits)'}
+                  {profile && profile.credits < estimatedCost && ' (insufficient credits)'}
                 </span>
               )}
             </div>
@@ -120,7 +120,7 @@ export default function ChatInterface() {
             <Button 
               type="submit" 
               className="bg-maiRed hover:bg-red-600"
-              disabled={!message.trim() || user.credits < estimatedCost}
+              disabled={!message.trim() || !profile || profile.credits < estimatedCost}
             >
               Send
             </Button>

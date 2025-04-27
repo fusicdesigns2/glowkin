@@ -8,7 +8,7 @@ import { useChat } from '@/contexts/ChatContext';
 import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { threads } = useChat();
   const navigate = useNavigate();
   
@@ -39,7 +39,7 @@ export default function Dashboard() {
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>Current Balance</CardDescription>
-                <CardTitle className="text-3xl">{user.credits} credits</CardTitle>
+                <CardTitle className="text-3xl">{profile?.credits} credits</CardTitle>
               </CardHeader>
               <CardContent>
                 <Button 

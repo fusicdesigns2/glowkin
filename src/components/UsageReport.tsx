@@ -6,7 +6,7 @@ import { useChat } from '@/contexts/ChatContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function UsageReport() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { threads } = useChat();
   
   // Calculate total messages sent
@@ -73,7 +73,7 @@ export default function UsageReport() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Current Balance</CardDescription>
-            <CardTitle className="text-2xl">{user.credits} credits</CardTitle>
+            <CardTitle className="text-2xl">{profile?.credits} credits</CardTitle>
           </CardHeader>
         </Card>
         

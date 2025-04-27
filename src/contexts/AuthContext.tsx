@@ -19,6 +19,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, username: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  updateCredits: (newCreditsAmount: number) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -118,6 +119,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     navigate('/login');
   };
 
+  const updateCredits = async (newCreditsAmount: number) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ credits: newCreditsAmount, updated_at: new Date() })
+      .eq('id', user.id);
+
+    if (error) {
+      toast.error('Failed to update credits: ' + error.message);
+      throw error;
+    }
+
+    // Update local profile state
+    setProfile(prev => prev ? { ...prev, credits: newCreditsAmount } : null);
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -131,6 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUp,
         signIn,
         signOut,
+        updateCredits,
       }}
     >
       {children}

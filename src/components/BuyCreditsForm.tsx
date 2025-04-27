@@ -32,12 +32,12 @@ const pricingTiers: PricingTier[] = [
 ];
 
 export default function BuyCreditsForm() {
-  const { user, updateCredits } = useAuth();
+  const { user, profile, updateCredits } = useAuth();
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
   const handlePurchase = async () => {
-    if (!selectedTier || !user) return;
+    if (!selectedTier || !user || !profile) return;
     
     const tier = pricingTiers.find(t => t.id === selectedTier);
     if (!tier) return;
@@ -49,7 +49,7 @@ export default function BuyCreditsForm() {
       await new Promise(r => setTimeout(r, 2000));
       
       // Update user credits
-      updateCredits(user.credits + tier.credits);
+      await updateCredits(profile.credits + tier.credits);
       
       toast.success(`Successfully purchased ${tier.credits} credits!`);
       setSelectedTier(null);
