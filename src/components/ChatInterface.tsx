@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,12 +14,10 @@ export default function ChatInterface() {
   const [estimatedCost, setEstimatedCost] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom when messages update
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [currentThread?.messages]);
 
-  // Update estimated cost when message changes
   useEffect(() => {
     if (message.trim()) {
       const cost = getMessageCostEstimate(message);
@@ -89,7 +86,7 @@ export default function ChatInterface() {
                           {msg.model || 'unknown model'}
                         </Badge>
                         <Badge variant="outline" className="text-xs">
-                          {msg.tokens_used || 0} tokens
+                          in: {msg.input_tokens || 0} / out: {msg.output_tokens || 0} tokens
                         </Badge>
                       </>
                     )}

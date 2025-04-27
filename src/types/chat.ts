@@ -1,11 +1,11 @@
-
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
   model?: string;
-  tokens_used?: number;
+  input_tokens?: number;
+  output_tokens?: number;
 }
 
 export interface Thread {

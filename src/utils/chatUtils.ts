@@ -27,7 +27,8 @@ export const saveMessage = async (
   role: 'user' | 'assistant', 
   content: string,
   model: string,
-  tokensUsed: number
+  inputTokens: number,
+  outputTokens: number
 ): Promise<void> => {
   // Ensure threadId is a valid UUID before sending to Supabase
   if (!threadId || !isValidUUID(threadId)) {
@@ -41,7 +42,8 @@ export const saveMessage = async (
       role,
       content,
       model,
-      tokens_used: tokensUsed
+      input_tokens: inputTokens,
+      output_tokens: outputTokens
     });
 
   if (error) throw error;
@@ -130,7 +132,6 @@ export const sendChatMessage = async (messages: ChatMessage[]) => {
 
     console.log('Edge function response:', response);
 
-    // Handle specific error cases
     if (response.error) {
       if (response.error.message.includes('quota')) {
         throw new Error('OpenAI API quota exceeded. Please try again later or add more credits.');
@@ -138,7 +139,6 @@ export const sendChatMessage = async (messages: ChatMessage[]) => {
       throw new Error(response.error.message);
     }
 
-    // Handle error in response data
     if (response.data?.error) {
       const errorMessage = response.data.error;
       const errorCode = response.data.errorCode;
@@ -150,29 +150,29 @@ export const sendChatMessage = async (messages: ChatMessage[]) => {
       throw new Error(errorMessage || 'Error from OpenAI service');
     }
 
-    // Make sure we have valid response data
     if (!response.data) {
       throw new Error('No data received from the chat service');
     }
 
-    // Validate that we have what we need in the data structure
     if (!response.data.choices || !response.data.choices.length) {
       console.warn('No choices returned in the response:', response.data);
       return {
         content: "I'm sorry, I couldn't generate a response at this time. Please try again later.",
-        tokensUsed: 0,
+        input_tokens: 0,
+        output_tokens: 0,
         model: "error"
       };
     }
 
-    // Safely extract the message content
     const messageContent = response.data.choices[0]?.message?.content;
-    const tokensUsed = response.data.usage?.total_tokens || 0;
+    const inputTokens = response.data.usage?.prompt_tokens || 0;
+    const outputTokens = response.data.usage?.completion_tokens || 0;
     const model = response.data.model || 'gpt-4o-mini';
 
     return {
       content: messageContent,
-      tokensUsed,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
       model
     };
   } catch (error) {
