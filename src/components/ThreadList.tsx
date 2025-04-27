@@ -6,6 +6,7 @@ import { useChat } from '@/contexts/ChatContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Edit, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export default function ThreadList() {
   const { threads, currentThread, selectThread, createThread } = useChat();
@@ -13,6 +14,11 @@ export default function ThreadList() {
   const [editedTitle, setEditedTitle] = useState('');
 
   const updateThreadTitle = async (threadId: string, newTitle: string) => {
+    if (!newTitle.trim()) {
+      toast.error("Thread title cannot be empty");
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('chat_threads')
@@ -20,9 +26,22 @@ export default function ThreadList() {
         .eq('id', threadId);
 
       if (error) throw error;
+      
+      // Update the local state to reflect the change without needing a reload
+      const updatedThreads = threads.map(t => 
+        t.id === threadId ? { ...t, title: newTitle } : t
+      );
+      
+      // Force the context to update with the new threads array
+      // This is a bit of a hack, but it works since the Chat context
+      // is watching the threads array
+      selectThread(threadId);
+      
       setEditableThreadId(null);
+      toast.success("Thread title updated");
     } catch (error) {
       console.error('Error updating thread title:', error);
+      toast.error("Failed to update thread title");
     }
   };
 
@@ -66,10 +85,22 @@ export default function ThreadList() {
                     <Input
                       value={editedTitle}
                       onChange={(e) => setEditedTitle(e.target.value)}
-                      onBlur={() => updateThreadTitle(thread.id, editedTitle)}
+                      onBlur={() => {
+                        if (editedTitle.trim() !== thread.title) {
+                          updateThreadTitle(thread.id, editedTitle);
+                        } else {
+                          setEditableThreadId(null);
+                        }
+                      }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          updateThreadTitle(thread.id, editedTitle);
+                          if (editedTitle.trim() !== thread.title) {
+                            updateThreadTitle(thread.id, editedTitle);
+                          } else {
+                            setEditableThreadId(null);
+                          }
+                        } else if (e.key === 'Escape') {
+                          setEditableThreadId(null);
                         }
                       }}
                       className="text-sm"
