@@ -150,21 +150,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const value = {
+    threads,
+    currentThread,
+    isLoading,
+    createThread,
+    selectThread,
+    sendMessage,
+    getMessageCostEstimate,
+    funFacts,
+    currentFunFact,
+    refreshFunFact
+  };
+
   return (
-    <ChatContext.Provider
-      value={{
-        threads,
-        currentThread,
-        isLoading,
-        createThread,
-        selectThread,
-        sendMessage,
-        getMessageCostEstimate,
-        funFacts,
-        currentFunFact,
-        refreshFunFact
-      }}
-    >
+    <ChatContext.Provider value={value}>
       {children}
     </ChatContext.Provider>
   );
