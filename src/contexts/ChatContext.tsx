@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
@@ -123,8 +122,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       setCurrentThread(updatedThread);
       
-      // Updated to match new saveMessage signature with input and output tokens
-      await saveMessage(updatedThread.id, 'user', content, 'user-message', 0, 0);
+      await saveMessage(
+        updatedThread.id, 
+        'user', 
+        content, 
+        'user-message', 
+        0, 
+        0
+      );
 
       const response = await sendChatMessage(updatedThread.messages);
       
@@ -133,11 +138,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
-      // Updated to use the new property names
       const { content: aiResponse, input_tokens, output_tokens, model } = response;
       
-      // Updated to match new saveMessage signature with input and output tokens
-      await saveMessage(updatedThread.id, 'assistant', aiResponse, model, input_tokens, output_tokens);
+      const tenXCost = Math.ceil(estimatedCost * 10); // Calculate 10x cost
+
+      await saveMessage(
+        updatedThread.id, 
+        'assistant', 
+        aiResponse, 
+        model, 
+        input_tokens, 
+        output_tokens,
+        tenXCost // Pass 10x cost to saveMessage
+      );
 
       const aiMessage: ChatMessage = {
         id: `msg_${Date.now() + 1}`,
@@ -146,7 +159,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         timestamp: new Date(),
         model: model,
         input_tokens: input_tokens,
-        output_tokens: output_tokens
+        output_tokens: output_tokens,
+        tenXCost // Add 10x cost to AI message
       };
 
       const finalThread = {

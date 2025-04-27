@@ -1,4 +1,3 @@
-
 import { Thread, ChatMessage, ThreadMessage } from '@/types/chat';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -28,9 +27,9 @@ export const saveMessage = async (
   content: string,
   model: string,
   inputTokens: number,
-  outputTokens: number
+  outputTokens: number,
+  tenXCost: number = 0
 ): Promise<void> => {
-  // Ensure threadId is a valid UUID before sending to Supabase
   if (!threadId || !isValidUUID(threadId)) {
     throw new Error(`Invalid thread ID format: ${threadId}`);
   }
@@ -43,13 +42,13 @@ export const saveMessage = async (
       content,
       model,
       input_tokens: inputTokens,
-      output_tokens: outputTokens
+      output_tokens: outputTokens,
+      "10x_cost": tenXCost
     });
 
   if (error) throw error;
 };
 
-// Helper function to validate UUID format
 function isValidUUID(id: string): boolean {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(id);
@@ -83,7 +82,8 @@ export const loadThreadsFromDB = async (userId: string): Promise<Thread[]> => {
         timestamp: new Date(msg.created_at),
         model: msg.model,
         input_tokens: msg.input_tokens,
-        output_tokens: msg.output_tokens
+        output_tokens: msg.output_tokens,
+        tenXCost: msg["10x_cost"]
       })),
       lastUpdated: new Date(thread.updated_at)
     };

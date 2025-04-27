@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       chat_messages: {
         Row: {
+          "10x_cost": number
           content: string
           created_at: string | null
           id: string
@@ -21,6 +22,7 @@ export type Database = {
           thread_id: string | null
         }
         Insert: {
+          "10x_cost"?: number
           content: string
           created_at?: string | null
           id?: string
@@ -31,6 +33,7 @@ export type Database = {
           thread_id?: string | null
         }
         Update: {
+          "10x_cost"?: number
           content?: string
           created_at?: string | null
           id?: string
