@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoadingScreen from './LoadingScreen';
 import { getActiveModelCost, calculateTokenCosts } from '@/utils/chatUtils';
 import { ModelCost } from '@/types/chat';
+import ReactMarkdown from 'react-markdown';
 
 export default function ChatInterface() {
   const { currentThread, sendMessage, isLoading, getMessageCostEstimate } = useChat();
@@ -96,11 +97,15 @@ export default function ChatInterface() {
                 <div 
                   className={`max-w-[80%] p-3 rounded-lg ${
                     msg.role === 'user' 
-                      ? 'bg-blue-500/20 text-black font-bold rounded-tr-none' 
+                      ? 'bg-[#0000FF]/20 text-black font-bold rounded-tr-none' 
                       : 'bg-white border border-gray-200 rounded-tl-none shadow-sm'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  {msg.role === 'user' ? (
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  ) : (
+                    <ReactMarkdown className="prose prose-sm max-w-none">{msg.content}</ReactMarkdown>
+                  )}
                   <div className={`text-xs mt-1 flex items-center gap-2 flex-wrap ${
                     msg.role === 'user' 
                       ? 'text-black' 
