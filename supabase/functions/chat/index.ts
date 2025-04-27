@@ -29,62 +29,81 @@ serve(async (req) => {
     if (generateImage) {
       console.log('Generating image with prompt:', messages[messages.length - 1].content);
       
-      // For DALL-E 3 specific image requests, we need to ensure the prompt is appropriate
-      // and contains enough details for the model to work with
-      let prompt = messages[messages.length - 1].content;
-      
-      // Ensure the prompt is detailed enough for image generation
-      if (prompt.length < 10) {
-        prompt = `A detailed, high-quality image of ${prompt}`;
-      }
-      
-      const response = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: prompt,
-          n: 1,
-          size: "1024x1024",
-          quality: "standard"
-        }),
-      });
+      try {
+        // Get the user's prompt
+        const userPrompt = messages[messages.length - 1].content;
+        
+        // Enhanced prompt to make it more DALL-E friendly
+        let enhancedPrompt = userPrompt;
+        if (enhancedPrompt.length < 20) {
+          enhancedPrompt = `A detailed, high-quality image of ${userPrompt}`;
+        }
+        
+        // Add style guidance for better results
+        if (!enhancedPrompt.toLowerCase().includes('style') && 
+            !enhancedPrompt.toLowerCase().includes('detailed')) {
+          enhancedPrompt += ". Create in a detailed, professional art style.";
+        }
+        
+        console.log('Enhanced image prompt:', enhancedPrompt);
+        
+        const response = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: "dall-e-3",
+            prompt: enhancedPrompt,
+            n: 1,
+            size: "1024x1024",
+            quality: "standard"
+          }),
+        });
 
-      const imageData = await response.json();
-      
-      if (!response.ok) {
-        console.error('OpenAI Image API error:', JSON.stringify(imageData));
-        return new Response(JSON.stringify({ 
-          error: imageData.error?.message || 'Error generating image',
-          errorCode: imageData.error?.code || 'unknown_error' 
+        const imageData = await response.json();
+        
+        if (!response.ok) {
+          console.error('OpenAI Image API error:', JSON.stringify(imageData));
+          return new Response(JSON.stringify({ 
+            error: imageData.error?.message || 'Error generating image',
+            errorCode: imageData.error?.code || 'unknown_error' 
+          }), {
+            status: response.status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (!imageData.data || !imageData.data[0] || !imageData.data[0].url) {
+          console.error('Missing image URL in response:', JSON.stringify(imageData));
+          return new Response(JSON.stringify({
+            error: 'No image URL returned from OpenAI',
+            errorCode: 'missing_image_url'
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        console.log('Successfully generated image, returning URL');
+        
+        return new Response(JSON.stringify({
+          url: imageData.data[0].url,
+          model: 'image-alpha-001'
         }), {
-          status: response.status,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-      }
-
-      if (!imageData.data || !imageData.data[0] || !imageData.data[0].url) {
-        console.error('Missing image URL in response:', JSON.stringify(imageData));
-        return new Response(JSON.stringify({
-          error: 'No image URL returned from OpenAI',
-          errorCode: 'missing_image_url'
+      } catch (imageError) {
+        console.error('Exception in image generation:', imageError);
+        return new Response(JSON.stringify({ 
+          error: `Image generation failed: ${imageError.message}`,
+          errorCode: 'image_generation_exception' 
         }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-
-      console.log('Successfully generated image, returning URL');
-      
-      return new Response(JSON.stringify({
-        url: imageData.data[0].url,
-        model: 'image-alpha-001'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
     }
 
     console.log('Processing chat request with messages:', JSON.stringify(messages).substring(0, 100) + '...');

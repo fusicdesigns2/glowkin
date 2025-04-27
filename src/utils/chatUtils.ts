@@ -1,3 +1,4 @@
+
 import { Thread, ChatMessage, ThreadMessage, ModelCost } from '@/types/chat';
 import { supabase } from '@/integrations/supabase/client';
 
