@@ -104,7 +104,16 @@ export default function ChatInterface() {
                   {msg.role === 'user' ? (
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                   ) : (
-                    <ReactMarkdown className="prose prose-sm max-w-none">{msg.content}</ReactMarkdown>
+                    <ReactMarkdown 
+                      className="prose prose-sm max-w-none" 
+                      components={{
+                        p: ({node, ...props}) => (
+                          <p className="my-4" {...props} />
+                        )
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
                   )}
                   <div className={`text-xs mt-1 flex items-center gap-2 flex-wrap ${
                     msg.role === 'user' 
