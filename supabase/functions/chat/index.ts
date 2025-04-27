@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, generateImage } = await req.json()
+    const { messages, generateImage, model } = await req.json()
     const openAiKey = Deno.env.get('OPENAI_API_KEY')
 
     if (!openAiKey) {
@@ -108,7 +108,9 @@ serve(async (req) => {
       }
     }
 
-    console.log('Processing chat request with messages:', JSON.stringify(messages).substring(0, 100) + '...');
+    // Use the model passed in the request, or fall back to a default if not provided
+    const selectedModel = model || 'gpt-4o-mini';
+    console.log('Processing chat request with messages:', JSON.stringify(messages).substring(0, 100) + '...', 'using model:', selectedModel);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -117,7 +119,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: selectedModel,
         messages: [
           { role: 'system', content: 'You are a helpful AI assistant.' },
           ...messages.map(msg => ({
@@ -158,7 +160,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       ...responseData,
       usage: responseData.usage || { total_tokens: 0 },
-      model: responseData.model || 'gpt-4o-mini'
+      model: selectedModel // Return the model that was actually used
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

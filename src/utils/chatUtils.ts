@@ -121,7 +121,7 @@ export const saveThreadsToStorage = (userId: string, threads: Thread[]): void =>
   localStorage.setItem(`maimai_threads_${userId}`, JSON.stringify(threads));
 };
 
-export const sendChatMessage = async (messages: ChatMessage[], generateImage: boolean = false, model: string = 'gpt-4.1-mini-2025-04-14') => {
+export const sendChatMessage = async (messages: ChatMessage[], generateImage: boolean = false, model: string = 'gpt-4o-mini') => {
   try {
     console.log('Sending chat messages to edge function:', messages, 'using model:', model);
     
