@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useChat } from '@/contexts/ChatContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Edit, Save } from 'lucide-react';
+import { Plus, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -100,7 +100,7 @@ export default function ThreadList() {
                       autoFocus
                     />
                   ) : (
-                    <div className="flex items-center w-full">
+                    <div className="flex items-center justify-between w-full">
                       <Button
                         variant="ghost"
                         className={`flex-grow justify-start text-left truncate ${
@@ -118,7 +118,7 @@ export default function ThreadList() {
                           e.stopPropagation();
                           handleTitleClick(thread);
                         }}
-                        className="p-1 ml-1 hover:bg-gray-100 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-1 hover:bg-gray-100 rounded-full transition-colors opacity-0 group-hover:opacity-100"
                         aria-label="Edit thread title"
                       >
                         <Edit className="w-4 h-4" />
