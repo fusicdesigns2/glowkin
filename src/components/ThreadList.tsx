@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,24 +80,26 @@ export default function ThreadList() {
                         variant="ghost"
                         className={`flex-grow justify-start text-left truncate ${
                           currentThread?.id === thread.id 
-                            ? 'bg-gray-100 font-medium' 
+                            ? 'bg-gray-100 font-bold pointer-events-none' 
                             : 'hover:bg-maiRed/50'
                         }`}
                         onClick={() => selectThread(thread.id)}
                       >
                         <span className="truncate w-40">{thread.title}</span>
                       </Button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleTitleClick(thread);
-                        }}
-                        className="p-1 hover:bg-red-500/50 hover:scale-105 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100"
-                        aria-label="Edit thread title"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
+                      {currentThread?.id !== thread.id && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTitleClick(thread);
+                          }}
+                          className="p-1 hover:bg-maiRed/50 hover:scale-105 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100"
+                          aria-label="Edit thread title"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <Input
