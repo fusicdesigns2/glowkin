@@ -1,117 +1,138 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-interface User {
+interface UserProfile {
   id: string;
-  email: string;
-  name?: string;
+  username: string;
+  avatar_url: string | null;
   credits: number;
 }
 
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
-  updateCredits: (newAmount: number) => void;
+  profile: UserProfile | null;
+  session: Session | null;
+  signUp: (email: string, password: string, username: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  // Mock authentication for now - would be replaced with real auth
   useEffect(() => {
-    const storedUser = localStorage.getItem('maimai_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error('Failed to parse stored user:', e);
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          setProfile(profile);
+        } else {
+          setProfile(null);
+        }
       }
-    }
-    setIsLoading(false);
+    );
+
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => {
+            setProfile(data);
+            setLoading(false);
+          });
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      // Mock login - would be replaced with real auth
-      if (password.length < 6) {
-        throw new Error('Invalid credentials');
-      }
-      
-      // Simulate network delay
-      await new Promise(r => setTimeout(r, 800));
-      
-      // Mock user data
-      const userData = {
-        id: `user_${Date.now()}`,
-        email,
-        name: email.split('@')[0],
-        credits: 0, // New users start with 0 credits
-      };
-      
-      setUser(userData);
-      localStorage.setItem('maimai_user', JSON.stringify(userData));
-      toast.success('Successfully logged in!');
-    } catch (error) {
-      toast.error('Login failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+  const signUp = async (email: string, password: string, username: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username,
+        },
+      },
+    });
+
+    if (error) {
+      toast.error(error.message);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
+
+    toast.success('Successfully signed up! Please check your email for verification.');
+    navigate('/login');
   };
 
-  const register = async (email: string, password: string, name: string) => {
-    setIsLoading(true);
-    try {
-      // Mock registration - would be replaced with real auth
-      if (password.length < 6) {
-        throw new Error('Password must be at least 6 characters');
-      }
-      
-      // Simulate network delay
-      await new Promise(r => setTimeout(r, 800));
-      
-      // Mock user data with 5 free credits for new users
-      const userData = {
-        id: `user_${Date.now()}`,
-        email,
-        name,
-        credits: 5, // New users start with 5 free credits
-      };
-      
-      setUser(userData);
-      localStorage.setItem('maimai_user', JSON.stringify(userData));
-      toast.success('Registration successful! You received 5 free credits.');
-    } catch (error) {
-      toast.error('Registration failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      toast.error(error.message);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
+
+    toast.success('Successfully logged in!');
+    navigate('/');
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('maimai_user');
-    toast.info('You have been logged out');
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error(error.message);
+      throw error;
+    }
+    navigate('/login');
   };
 
-  const updateCredits = (newAmount: number) => {
-    if (!user) return;
-    const updatedUser = { ...user, credits: newAmount };
-    setUser(updatedUser);
-    localStorage.setItem('maimai_user', JSON.stringify(updatedUser));
-  };
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateCredits }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        session,
+        signUp,
+        signIn,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

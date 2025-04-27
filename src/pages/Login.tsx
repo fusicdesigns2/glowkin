@@ -12,7 +12,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { login } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,7 +21,7 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      await signIn(email, password);
       navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -79,16 +79,12 @@ export default function Login() {
             </div>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <div className="text-sm text-gray-500 text-center">
+        <CardFooter>
+          <div className="text-sm text-gray-500 text-center w-full">
             Don't have an account?{' '}
             <a href="/register" className="text-maiRed hover:underline">
               Sign up
             </a>
-          </div>
-          
-          <div className="text-xs text-gray-400 text-center">
-            For demo purposes: Any email with a password of 6+ characters will work
           </div>
         </CardFooter>
       </Card>
