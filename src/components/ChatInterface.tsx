@@ -6,12 +6,15 @@ import { Badge } from '@/components/ui/badge';
 import { useChat } from '@/contexts/ChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingScreen from './LoadingScreen';
+import { getActiveModelCost, calculateTokenCosts } from '@/utils/chatUtils';
+import { ModelCost } from '@/types/chat';
 
 export default function ChatInterface() {
   const { currentThread, sendMessage, isLoading, getMessageCostEstimate } = useChat();
   const { user, profile } = useAuth();
   const [message, setMessage] = useState('');
   const [estimatedCost, setEstimatedCost] = useState(0);
+  const [modelCosts, setModelCosts] = useState<Record<string, ModelCost>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,6 +29,25 @@ export default function ChatInterface() {
       setEstimatedCost(0);
     }
   }, [message, getMessageCostEstimate]);
+
+  useEffect(() => {
+    const fetchModelCosts = async () => {
+      if (!currentThread?.messages) return;
+      
+      const costs: Record<string, ModelCost> = {};
+      for (const msg of currentThread.messages) {
+        if (msg.role === 'assistant' && msg.model && !costs[msg.model]) {
+          const cost = await getActiveModelCost(msg.model);
+          if (cost) {
+            costs[msg.model] = cost;
+          }
+        }
+      }
+      setModelCosts(costs);
+    };
+
+    fetchModelCosts();
+  }, [currentThread?.messages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,7 +101,7 @@ export default function ChatInterface() {
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{msg.content}</p>
-                  <div className={`text-xs mt-1 flex items-center gap-2 ${msg.role === 'user' ? 'text-red-100' : 'text-gray-500'}`}>
+                  <div className={`text-xs mt-1 flex items-center gap-2 flex-wrap ${msg.role === 'user' ? 'text-red-100' : 'text-gray-500'}`}>
                     {msg.role === 'assistant' && (
                       <>
                         <Badge variant="secondary" className="text-xs">
@@ -88,6 +110,15 @@ export default function ChatInterface() {
                         <Badge variant="outline" className="text-xs">
                           in: {msg.input_tokens || 0} / out: {msg.output_tokens || 0} tokens
                         </Badge>
+                        {msg.model && modelCosts[msg.model] && (
+                          <Badge variant="outline" className="text-xs">
+                            cost: ${(calculateTokenCosts(
+                              msg.input_tokens || 0,
+                              msg.output_tokens || 0,
+                              modelCosts[msg.model]
+                            )).toFixed(10)}
+                          </Badge>
+                        )}
                       </>
                     )}
                     <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>

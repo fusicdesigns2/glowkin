@@ -181,3 +181,28 @@ export const sendChatMessage = async (messages: ChatMessage[]) => {
     throw error;
   }
 };
+
+export const getActiveModelCost = async (model: string): Promise<ModelCost | null> => {
+  const { data, error } = await supabase
+    .from('model_costs')
+    .select('*')
+    .eq('model', model)
+    .eq('active', true)
+    .single();
+
+  if (error || !data) {
+    console.error('Error fetching model cost:', error);
+    return null;
+  }
+
+  return {
+    ...data,
+    date: new Date(data.date)
+  };
+};
+
+export const calculateTokenCosts = (inputTokens: number, outputTokens: number, modelCost: ModelCost): number => {
+  const inputCost = inputTokens * modelCost.in_cost * modelCost.markup;
+  const outputCost = outputTokens * modelCost.out_cost * modelCost.markup;
+  return inputCost + outputCost;
+};

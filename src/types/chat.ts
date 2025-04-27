@@ -1,4 +1,3 @@
-
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -34,4 +33,14 @@ export interface DBThread {
   title: string;
   created_at: Date;
   updated_at: Date;
+}
+
+export interface ModelCost {
+  id: string;
+  date: Date;
+  model: string;
+  in_cost: number;
+  out_cost: number;
+  active: boolean;
+  markup: number;
 }

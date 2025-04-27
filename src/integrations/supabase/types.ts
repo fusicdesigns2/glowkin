@@ -77,6 +77,36 @@ export type Database = {
         }
         Relationships: []
       }
+      model_costs: {
+        Row: {
+          active: boolean
+          date: string
+          id: string
+          in_cost: number
+          markup: number
+          model: string
+          out_cost: number
+        }
+        Insert: {
+          active?: boolean
+          date?: string
+          id?: string
+          in_cost: number
+          markup: number
+          model: string
+          out_cost: number
+        }
+        Update: {
+          active?: boolean
+          date?: string
+          id?: string
+          in_cost?: number
+          markup?: number
+          model?: string
+          out_cost?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
