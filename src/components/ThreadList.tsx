@@ -114,8 +114,11 @@ export default function ThreadList() {
                       </Button>
                       <button
                         type="button"
-                        className="p-1 ml-1 hover:bg-gray-100 rounded-full transition-colors"
-                        onClick={() => handleTitleClick(thread)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTitleClick(thread);
+                        }}
+                        className="p-1 ml-1 hover:bg-gray-100 rounded-full transition-colors opacity-0 group-hover:opacity-100"
                         aria-label="Edit thread title"
                       >
                         <Edit className="w-4 h-4" />
