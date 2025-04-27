@@ -29,6 +29,15 @@ serve(async (req) => {
     if (generateImage) {
       console.log('Generating image with prompt:', messages[messages.length - 1].content);
       
+      // For DALL-E 3 specific image requests, we need to ensure the prompt is appropriate
+      // and contains enough details for the model to work with
+      let prompt = messages[messages.length - 1].content;
+      
+      // Ensure the prompt is detailed enough for image generation
+      if (prompt.length < 10) {
+        prompt = `A detailed, high-quality image of ${prompt}`;
+      }
+      
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
@@ -37,16 +46,17 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: "dall-e-3",
-          prompt: messages[messages.length - 1].content,
+          prompt: prompt,
           n: 1,
-          size: "1024x1024"
+          size: "1024x1024",
+          quality: "standard"
         }),
       });
 
       const imageData = await response.json();
       
       if (!response.ok) {
-        console.error('OpenAI Image API error:', imageData);
+        console.error('OpenAI Image API error:', JSON.stringify(imageData));
         return new Response(JSON.stringify({ 
           error: imageData.error?.message || 'Error generating image',
           errorCode: imageData.error?.code || 'unknown_error' 
@@ -56,6 +66,19 @@ serve(async (req) => {
         });
       }
 
+      if (!imageData.data || !imageData.data[0] || !imageData.data[0].url) {
+        console.error('Missing image URL in response:', JSON.stringify(imageData));
+        return new Response(JSON.stringify({
+          error: 'No image URL returned from OpenAI',
+          errorCode: 'missing_image_url'
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      console.log('Successfully generated image, returning URL');
+      
       return new Response(JSON.stringify({
         url: imageData.data[0].url,
         model: 'image-alpha-001'
@@ -66,6 +89,7 @@ serve(async (req) => {
 
     console.log('Processing chat request with messages:', JSON.stringify(messages).substring(0, 100) + '...');
 
+    // Regular chat completion request
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
