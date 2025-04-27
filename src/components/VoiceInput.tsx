@@ -28,6 +28,7 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
   const [countdown, setCountdown] = useState(3);
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordingInterval, setRecordingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [hasCheckedConsent, setHasCheckedConsent] = useState(false);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
   const { toast } = useToast();
@@ -51,6 +52,7 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
           return;
         }
         
+        setHasCheckedConsent(true);
         if (data && !data.whisper_consent) {
           setShowConsent(true);
         }
@@ -59,8 +61,10 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
       }
     };
     
-    checkConsent();
-  }, [user]);
+    if (user && !hasCheckedConsent) {
+      checkConsent();
+    }
+  }, [user, hasCheckedConsent]);
 
   const handleConsent = async (consent: boolean) => {
     if (!user) return;
@@ -91,6 +95,11 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
       }
     } catch (error) {
       console.error('Failed to save consent:', error);
+      toast({
+        title: "Error",
+        description: "Could not save your preference. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -161,6 +170,9 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
                     input_tokens: 0,
                     output_tokens: 0,
                     credit_cost: Math.ceil(estimatedCost)
+                  })
+                  .catch(err => {
+                    console.error('Failed to log transcription usage:', err);
                   });
               }
             } catch (error) {
@@ -233,33 +245,33 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
         return;
       }
       
-      try {
-        supabase
-          .from('profiles')
-          .select('whisper_consent')
-          .eq('id', user.id)
-          .single()
-          .then(({ data, error }) => {
-            if (error) {
-              console.error('Error checking consent:', error);
-              setShowConsent(true);
-              return;
-            }
-            
-            if (data && data.whisper_consent) {
-              initiateCountdown();
-            } else {
-              setShowConsent(true);
-            }
-          })
-          .catch(error => {
-            console.error('Failed to check consent status:', error);
-            setShowConsent(true);
-          });
-      } catch (error) {
+      checkConsentAndRecord();
+    }
+  };
+
+  const checkConsentAndRecord = async () => {
+    try {
+      // Always fetch the latest consent status from the database
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('whisper_consent')
+        .eq('id', user?.id)
+        .single();
+      
+      if (error) {
         console.error('Error checking consent:', error);
         setShowConsent(true);
+        return;
       }
+      
+      if (data && data.whisper_consent) {
+        initiateCountdown();
+      } else {
+        setShowConsent(true);
+      }
+    } catch (error) {
+      console.error('Error checking consent:', error);
+      setShowConsent(true);
     }
   };
 
@@ -307,23 +319,23 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
       <Button
         type="button"
         variant="ghost"
-        className={`relative p-0 h-14 w-14 rounded-full ${
+        className={`relative p-0 h-16 w-16 rounded-full ${
           isRecording 
             ? 'bg-red-500 animate-pulse' 
-            : 'bg-amber-400 hover:bg-amber-500'
+            : 'bg-amber-500 hover:bg-amber-600'
         }`}
         onClick={toggleRecording}
         disabled={disabled}
       >
         {isRecording ? (
-          <MicOff className="h-8 w-8 text-white" />
+          <MicOff className="h-10 w-10 text-white" />
         ) : (
-          <Mic className="h-8 w-8 text-white" />
+          <Mic className="h-10 w-10 text-white" />
         )}
       </Button>
       
       {isRecording && (
-        <div className="ml-2 text-xs text-white">
+        <div className="ml-2 text-sm text-white font-semibold">
           {formatTime(recordingTime)}
         </div>
       )}
