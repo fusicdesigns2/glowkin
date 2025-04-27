@@ -76,24 +76,27 @@ export default function ThreadList() {
                       autoFocus
                     />
                   ) : (
-                    <Button
-                      variant="ghost"
-                      className={`w-full justify-start text-left truncate ${
-                        currentThread?.id === thread.id 
-                          ? 'bg-gray-100 font-medium' 
-                          : ''
-                      }`}
-                      onClick={() => selectThread(thread.id)}
-                    >
-                      <span className="truncate">{thread.title}</span>
-                      <Edit 
-                        className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleTitleClick(thread);
-                        }}
-                      />
-                    </Button>
+                    <div className="flex items-center w-full">
+                      <Button
+                        variant="ghost"
+                        className={`flex-grow justify-start text-left truncate ${
+                          currentThread?.id === thread.id 
+                            ? 'bg-gray-100 font-medium' 
+                            : ''
+                        }`}
+                        onClick={() => selectThread(thread.id)}
+                      >
+                        <span className="truncate">{thread.title}</span>
+                      </Button>
+                      <button
+                        type="button"
+                        className="p-1 ml-1 hover:bg-gray-100 rounded-full transition-colors"
+                        onClick={() => handleTitleClick(thread)}
+                        aria-label="Edit thread title"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}
