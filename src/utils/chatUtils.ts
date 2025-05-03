@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Thread, ChatMessage, ThreadMessage, ModelCost } from '@/types/chat';
 
@@ -127,7 +126,11 @@ export const saveThreadsToStorage = (userId: string, threads: Thread[]): void =>
 
 export const sendChatMessage = async (messages: ChatMessage[], generateImage: boolean = false, model: string = 'gpt-4o-mini') => {
   try {
-    console.log('Sending chat messages to edge function:', messages, 'using model:', model);
+    // Ensure we're using a valid model name
+    const validModel = ['gpt-4o-mini', 'gpt-4o', 'gpt-4.5-preview'].includes(model) ? 
+      model : 'gpt-4o-mini';
+      
+    console.log('Sending chat messages to edge function:', messages, 'using model:', validModel);
     
     const response = await supabase.functions.invoke('chat', {
       body: {
@@ -136,7 +139,7 @@ export const sendChatMessage = async (messages: ChatMessage[], generateImage: bo
           content: msg.content
         })),
         generateImage,
-        model
+        model: validModel
       }
     });
 

@@ -108,8 +108,27 @@ serve(async (req) => {
       }
     }
 
-    // Use the model passed in the request, or fall back to a default if not provided
-    const selectedModel = model || 'gpt-4o-mini';
+    // Validate and map the model parameter to supported models
+    let selectedModel = 'gpt-4o-mini'; // Default to gpt-4o-mini
+    
+    // If a model was specified, validate it against our supported models
+    if (model) {
+      // Normalize model names (handle case where user might send "GPT-4o" instead of "gpt-4o")
+      const normalizedModel = model.toLowerCase();
+      
+      // Map to supported models
+      if (normalizedModel === 'gpt-4o') {
+        selectedModel = 'gpt-4o';
+      } else if (normalizedModel === 'gpt-4.5-preview') {
+        selectedModel = 'gpt-4.5-preview';
+      } else if (normalizedModel !== 'gpt-4o-mini') {
+        // If unrecognized model, log the request but use default
+        console.log(`Requested unsupported model: ${model}, using default model: ${selectedModel}`);
+      } else {
+        selectedModel = 'gpt-4o-mini';
+      }
+    }
+    
     console.log('Processing chat request with messages:', JSON.stringify(messages).substring(0, 100) + '...', 'using model:', selectedModel);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
