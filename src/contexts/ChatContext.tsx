@@ -126,10 +126,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Add thread hiding functionality
   const hideThread = async (threadId: string) => {
     try {
-      // Update in database
+      // Update in database - explicitly define the data object
       const { error } = await supabase
         .from('chat_threads')
-        .update({ hidden: true })
+        .update({ hidden: true } as { hidden: boolean })
         .eq('id', threadId);
       
       if (error) throw error;
@@ -160,10 +160,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   
   const unhideThread = async (threadId: string) => {
     try {
-      // Update in database
+      // Update in database - explicitly define the data object
       const { error } = await supabase
         .from('chat_threads')
-        .update({ hidden: false })
+        .update({ hidden: false } as { hidden: boolean })
         .eq('id', threadId);
       
       if (error) throw error;
@@ -183,10 +183,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   
   const showAllHiddenThreads = async () => {
     try {
-      // Update in database
+      // Update in database - explicitly define the data object
       const { error } = await supabase
         .from('chat_threads')
-        .update({ hidden: false })
+        .update({ hidden: false } as { hidden: boolean })
         .eq('user_id', user?.id);
       
       if (error) throw error;
@@ -208,10 +208,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const newThread = await createNewThread();
       if (!newThread) return;
       
-      // Update in database - hide all threads except the new one
+      // Update in database - explicitly define the data object
       const { error } = await supabase
         .from('chat_threads')
-        .update({ hidden: true })
+        .update({ hidden: true } as { hidden: boolean })
         .eq('user_id', user?.id)
         .neq('id', newThread.id);
       
