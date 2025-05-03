@@ -1,3 +1,4 @@
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -26,6 +27,7 @@ export interface Thread {
   title: string;
   messages: ChatMessage[];
   lastUpdated: Date;
+  hidden?: boolean;
 }
 
 export interface DBThread {
@@ -34,6 +36,7 @@ export interface DBThread {
   title: string;
   created_at: Date;
   updated_at: Date;
+  hidden?: boolean;
 }
 
 export interface ModelCost {
