@@ -94,7 +94,8 @@ export const loadThreadsFromDB = async (userId: string): Promise<Thread[]> => {
         output_tokens: msg.output_tokens,
         tenXCost: msg["10x_cost"]
       })),
-      lastUpdated: new Date(thread.updated_at)
+      lastUpdated: new Date(thread.updated_at),
+      hidden: thread.hidden
     };
   }));
 

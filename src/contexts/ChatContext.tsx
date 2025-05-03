@@ -127,10 +127,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Add thread hiding functionality
   const hideThread = async (threadId: string) => {
     try {
-      // Update in database with a type assertion for the Supabase update
+      // Update in database
       const { error } = await supabase
         .from('chat_threads')
-        .update({ hidden: true } as any)
+        .update({ hidden: true })
         .eq('id', threadId);
       
       if (error) throw error;
@@ -161,10 +161,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   
   const unhideThread = async (threadId: string) => {
     try {
-      // Update in database with a type assertion for the Supabase update
+      // Update in database
       const { error } = await supabase
         .from('chat_threads')
-        .update({ hidden: false } as any)
+        .update({ hidden: false })
         .eq('id', threadId);
       
       if (error) throw error;
@@ -184,10 +184,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   
   const showAllHiddenThreads = async () => {
     try {
-      // Update in database with a type assertion for the Supabase update
+      // Update in database
       const { error } = await supabase
         .from('chat_threads')
-        .update({ hidden: false } as any)
+        .update({ hidden: false })
         .eq('user_id', user?.id);
       
       if (error) throw error;
@@ -209,10 +209,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const newThread = await createNewThread();
       if (!newThread) return;
       
-      // Update in database with a type assertion for the Supabase update
+      // Update in database
       const { error } = await supabase
         .from('chat_threads')
-        .update({ hidden: true } as any)
+        .update({ hidden: true })
         .eq('user_id', user?.id)
         .neq('id', newThread.id);
       

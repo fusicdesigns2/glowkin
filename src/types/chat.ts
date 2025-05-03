@@ -36,7 +36,7 @@ export interface DBThread {
   title: string;
   created_at: Date;
   updated_at: Date;
-  hidden?: boolean;
+  hidden: boolean;
 }
 
 export interface ModelCost {

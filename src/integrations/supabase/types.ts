@@ -176,6 +176,7 @@ export type Database = {
       chat_threads: {
         Row: {
           created_at: string | null
+          hidden: boolean | null
           id: string
           title: string
           updated_at: string | null
@@ -183,6 +184,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          hidden?: boolean | null
           id?: string
           title: string
           updated_at?: string | null
@@ -190,6 +192,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          hidden?: boolean | null
           id?: string
           title?: string
           updated_at?: string | null
