@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import ChatInterface from '@/components/ChatInterface';
@@ -43,7 +44,7 @@ export default function Index() {
             >
               {isPanelOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
-            <div className={`flex-grow ${isPanelOpen ? 'ml-0' : 'ml-0'} transition-all duration-300`}>
+            <div className={`flex-grow transition-all duration-300 flex flex-col`}>
               <ChatInterface />
             </div>
           </div>

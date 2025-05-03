@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ModelCost } from '@/types/chat';
@@ -6,6 +7,7 @@ export const useCostPrediction = (model: string, messageContent: string = '') =>
   const [predictedCost, setPredictedCost] = useState<number | null>(null);
   const [predictionDate, setPredictionDate] = useState<Date | null>(null);
   const [needsUpdate, setNeedsUpdate] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const formatPredictedCost = (cost: number | null) => {
     if (cost === null) return null;
@@ -14,8 +16,13 @@ export const useCostPrediction = (model: string, messageContent: string = '') =>
 
   useEffect(() => {
     const fetchPrediction = async () => {
-      if (!model) return;
+      if (!model) {
+        setIsLoading(false);
+        return;
+      }
 
+      setIsLoading(true);
+      
       const { data, error } = await supabase
         .from('model_costs')
         .select('predicted_cost, prediction_date')
@@ -25,11 +32,13 @@ export const useCostPrediction = (model: string, messageContent: string = '') =>
 
       if (error) {
         console.error('Error fetching prediction:', error);
+        setIsLoading(false);
         return;
       }
 
       setPredictedCost(formatPredictedCost(data.predicted_cost));
       setPredictionDate(new Date(data.prediction_date));
+      setIsLoading(false);
 
       // Check if prediction needs update (if prediction_date is not today)
       const today = new Date();
@@ -86,6 +95,7 @@ export const useCostPrediction = (model: string, messageContent: string = '') =>
   return {
     predictedCost,
     predictionDate,
-    needsUpdate
+    needsUpdate,
+    isLoading
   };
 };

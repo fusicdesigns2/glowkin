@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Thread, ChatMessage } from '@/types/chat';
@@ -35,6 +36,10 @@ interface ChatContextType {
   refreshFunFact: () => void;
   updateThreadInList: (threadId: string, updates: Partial<Thread>) => void;
   setSelectedModel: (model: string) => void;
+  hideThread: (threadId: string) => void;
+  unhideThread: (threadId: string) => void;
+  showAllHiddenThreads: () => void;
+  hideAllThreads: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -48,6 +53,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [currentFunFact, setCurrentFunFact] = useState<string>(funFactsArray[0]);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('');
+  const [threadModels, setThreadModels] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!user) {
@@ -82,6 +88,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         title: `New Chat ${threads.length + 1}`,
         messages: [],
         lastUpdated: new Date(),
+        hidden: false,
       };
       
       setThreads([newThread, ...threads]);
@@ -98,6 +105,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const thread = threads.find(t => t.id === threadId);
     if (thread) {
       setCurrentThread(thread);
+      // Use the thread's model if it has one saved
+      if (threadModels[threadId]) {
+        setSelectedModel(threadModels[threadId]);
+      }
     }
   };
 
@@ -113,7 +124,126 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const sendMessage = async (content: string, estimatedCost: number, model = 'gpt-4.1-mini-2025-04-14') => {
+  // Add thread hiding functionality
+  const hideThread = async (threadId: string) => {
+    try {
+      // Update in database
+      const { error } = await supabase
+        .from('chat_threads')
+        .update({ hidden: true })
+        .eq('id', threadId);
+      
+      if (error) throw error;
+      
+      // Update in state
+      const updatedThreads = threads.map(thread => 
+        thread.id === threadId ? { ...thread, hidden: true } : thread
+      );
+      setThreads(updatedThreads);
+      
+      // If the hidden thread was the current one, select another non-hidden thread
+      if (currentThread?.id === threadId) {
+        const nextVisibleThread = updatedThreads.find(t => !t.hidden);
+        if (nextVisibleThread) {
+          setCurrentThread(nextVisibleThread);
+        } else {
+          // If all threads are hidden, create a new one
+          createNewThread();
+        }
+      }
+      
+      toast.success("Thread hidden");
+    } catch (error) {
+      console.error('Error hiding thread:', error);
+      toast.error("Failed to hide thread");
+    }
+  };
+  
+  const unhideThread = async (threadId: string) => {
+    try {
+      // Update in database
+      const { error } = await supabase
+        .from('chat_threads')
+        .update({ hidden: false })
+        .eq('id', threadId);
+      
+      if (error) throw error;
+      
+      // Update in state
+      const updatedThreads = threads.map(thread => 
+        thread.id === threadId ? { ...thread, hidden: false } : thread
+      );
+      setThreads(updatedThreads);
+      
+      toast.success("Thread unhidden");
+    } catch (error) {
+      console.error('Error unhiding thread:', error);
+      toast.error("Failed to unhide thread");
+    }
+  };
+  
+  const showAllHiddenThreads = async () => {
+    try {
+      // Update in database
+      const { error } = await supabase
+        .from('chat_threads')
+        .update({ hidden: false })
+        .eq('user_id', user?.id);
+      
+      if (error) throw error;
+      
+      // Update in state
+      const updatedThreads = threads.map(thread => ({ ...thread, hidden: false }));
+      setThreads(updatedThreads);
+      
+      toast.success("All threads unhidden");
+    } catch (error) {
+      console.error('Error unhiding all threads:', error);
+      toast.error("Failed to unhide threads");
+    }
+  };
+  
+  const hideAllThreads = async () => {
+    try {
+      // First create a new thread to avoid having all threads hidden
+      const newThread = await createNewThread();
+      if (!newThread) return;
+      
+      // Update in database - hide all threads except the new one
+      const { error } = await supabase
+        .from('chat_threads')
+        .update({ hidden: true })
+        .eq('user_id', user?.id)
+        .neq('id', newThread.id);
+      
+      if (error) throw error;
+      
+      // Update in state
+      const updatedThreads = threads.map(thread => 
+        thread.id !== newThread.id ? { ...thread, hidden: true } : thread
+      );
+      setThreads(updatedThreads);
+      
+      toast.success("All previous threads hidden");
+    } catch (error) {
+      console.error('Error hiding all threads:', error);
+      toast.error("Failed to hide threads");
+    }
+  };
+
+  // Set model for the current thread
+  const setSelectedModelForThread = (model: string) => {
+    setSelectedModel(model);
+    
+    if (currentThread) {
+      setThreadModels(prev => ({
+        ...prev,
+        [currentThread.id]: model
+      }));
+    }
+  };
+
+  const sendMessage = async (content: string, estimatedCost: number, model?: string) => {
     if (!user || !profile) {
       toast.error('You need to be logged in to send messages');
       return;
@@ -128,6 +258,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     if (!threadToUse) {
       threadToUse = await createNewThread();
       if (!threadToUse) return;
+    }
+
+    // Use the thread's stored model or the passed model
+    const modelToUse = model || threadModels[threadToUse.id] || selectedModel;
+    
+    // Save the model for this thread
+    if (modelToUse && threadToUse) {
+      setThreadModels(prev => ({
+        ...prev,
+        [threadToUse.id]: modelToUse
+      }));
     }
 
     setIsLoading(true);
@@ -234,7 +375,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         });
 
       } else {
-        const aiResponse = await sendChatMessage(updatedThread.messages, false, model);
+        // Use the thread's stored model or the passed model
+        const aiResponse = await sendChatMessage(updatedThread.messages, false, modelToUse);
         
         if (typeof aiResponse === 'string') {
           toast.error(aiResponse);
@@ -261,7 +403,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           role: 'assistant',
           content: aiResponseContent,
           timestamp: new Date(),
-          model: model,
+          model: modelToUse,
           input_tokens: input_tokens,
           output_tokens: output_tokens,
           tenXCost
@@ -311,7 +453,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     currentFunFact,
     refreshFunFact,
     updateThreadInList,
-    setSelectedModel
+    setSelectedModel: setSelectedModelForThread,
+    hideThread,
+    unhideThread,
+    showAllHiddenThreads,
+    hideAllThreads
   };
 
   return (

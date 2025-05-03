@@ -47,6 +47,7 @@ export type Database = {
       chat_messages: {
         Row: {
           "10x_cost": number
+          charged_amount: number | null
           content: string
           created_at: string | null
           credit_cost: number
@@ -60,6 +61,7 @@ export type Database = {
         }
         Insert: {
           "10x_cost"?: number
+          charged_amount?: number | null
           content: string
           created_at?: string | null
           credit_cost?: number
@@ -73,6 +75,7 @@ export type Database = {
         }
         Update: {
           "10x_cost"?: number
+          charged_amount?: number | null
           content?: string
           created_at?: string | null
           credit_cost?: number
@@ -90,6 +93,82 @@ export type Database = {
             columns: ["thread_id"]
             isOneToOne: false
             referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_summaries: {
+        Row: {
+          "10x_cost": number | null
+          assistant_message_id: string
+          charged_amount: number | null
+          chunk_index: number | null
+          created_at: string
+          credit_cost: number | null
+          id: string
+          input_tokens: number | null
+          model: string
+          output_tokens: number | null
+          predicted_cost: number | null
+          summary: string
+          thread_id: string
+          total_chunks: number | null
+          user_message_id: string
+        }
+        Insert: {
+          "10x_cost"?: number | null
+          assistant_message_id: string
+          charged_amount?: number | null
+          chunk_index?: number | null
+          created_at?: string
+          credit_cost?: number | null
+          id?: string
+          input_tokens?: number | null
+          model: string
+          output_tokens?: number | null
+          predicted_cost?: number | null
+          summary: string
+          thread_id: string
+          total_chunks?: number | null
+          user_message_id: string
+        }
+        Update: {
+          "10x_cost"?: number | null
+          assistant_message_id?: string
+          charged_amount?: number | null
+          chunk_index?: number | null
+          created_at?: string
+          credit_cost?: number | null
+          id?: string
+          input_tokens?: number | null
+          model?: string
+          output_tokens?: number | null
+          predicted_cost?: number | null
+          summary?: string
+          thread_id?: string
+          total_chunks?: number | null
+          user_message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_summaries_assistant_message_id_fkey"
+            columns: ["assistant_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_summaries_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_summaries_user_message_id_fkey"
+            columns: ["user_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
             referencedColumns: ["id"]
           },
         ]
@@ -117,6 +196,67 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      failed_summaries: {
+        Row: {
+          assistant_message_id: string
+          attempt_count: number | null
+          chunk_index: number
+          created_at: string
+          error_message: string | null
+          id: string
+          last_attempt: string | null
+          thread_id: string
+          total_chunks: number
+          user_message_id: string
+        }
+        Insert: {
+          assistant_message_id: string
+          attempt_count?: number | null
+          chunk_index: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          last_attempt?: string | null
+          thread_id: string
+          total_chunks: number
+          user_message_id: string
+        }
+        Update: {
+          assistant_message_id?: string
+          attempt_count?: number | null
+          chunk_index?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          last_attempt?: string | null
+          thread_id?: string
+          total_chunks?: number
+          user_message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "failed_summaries_assistant_message_id_fkey"
+            columns: ["assistant_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_summaries_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_summaries_user_message_id_fkey"
+            columns: ["user_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       model_costs: {
         Row: {
@@ -196,15 +336,112 @@ export type Database = {
         }
         Relationships: []
       }
+      summaries: {
+        Row: {
+          chat_message_id: string
+          created_at: string | null
+          id: number
+          summary_text: string
+          thread_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          chat_message_id: string
+          created_at?: string | null
+          id?: number
+          summary_text: string
+          thread_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          chat_message_id?: string
+          created_at?: string | null
+          id?: number
+          summary_text?: string
+          thread_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "summaries_chat_message_id_fkey"
+            columns: ["chat_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "summaries_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: { role: Database["public"]["Enums"]["app_role"] }
+        Returns: boolean
+      }
+      insert_chat_summary: {
+        Args: {
+          p_thread_id: string
+          p_user_message_id: string
+          p_assistant_message_id: string
+          p_summary: string
+          p_model: string
+          p_chunk_index: number
+          p_total_chunks: number
+          p_input_tokens: number
+          p_output_tokens: number
+          p_charged_amount: number
+        }
+        Returns: {
+          "10x_cost": number | null
+          assistant_message_id: string
+          charged_amount: number | null
+          chunk_index: number | null
+          created_at: string
+          credit_cost: number | null
+          id: string
+          input_tokens: number | null
+          model: string
+          output_tokens: number | null
+          predicted_cost: number | null
+          summary: string
+          thread_id: string
+          total_chunks: number | null
+          user_message_id: string
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "SuperAdmin" | "User"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -319,6 +556,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["SuperAdmin", "User"],
+    },
   },
 } as const

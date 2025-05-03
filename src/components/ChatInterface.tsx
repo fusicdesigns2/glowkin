@@ -30,15 +30,16 @@ export default function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { data: activeModels, isLoading: isLoadingModels } = useActiveModels();
   const [selectedModelState, setSelectedModelState] = useState<string>('');
+  const [textareaHeight, setTextareaHeight] = useState<string>('100px');
   const { predictedCost, predictionDate } = useCostPrediction(selectedModelState, message);
 
   useEffect(() => {
-    if (activeModels && activeModels.length > 0) {
+    if (activeModels && activeModels.length > 0 && !selectedModelState) {
       const cheapestModel = [...activeModels].sort((a, b) => a.out_cost - b.out_cost)[0];
       setSelectedModelState(cheapestModel.model);
       setSelectedModel(cheapestModel.model);
     }
-  }, [activeModels, setSelectedModel]);
+  }, [activeModels, setSelectedModel, selectedModelState]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -91,6 +92,24 @@ export default function ChatInterface() {
   const handleModelChange = (model: string) => {
     setSelectedModelState(model);
     setSelectedModel(model);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (message.trim() && !isLoading && profile && profile.credits >= estimatedCost) {
+        handleSendMessage(e);
+      }
+    }
+  };
+
+  // Handle textarea resizing
+  const handleTextareaResize = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    // Automatically adjust textarea height based on content
+    const textarea = e.target;
+    textarea.style.height = 'auto'; // Reset height to recalculate
+    textarea.style.height = `${Math.max(100, Math.min(300, textarea.scrollHeight))}px`;
+    setMessage(e.target.value);
   };
 
   if (!user) {
@@ -157,7 +176,7 @@ export default function ChatInterface() {
                     
                     <div className={`text-xs mt-1 flex items-center gap-2 flex-wrap ${
                       msg.role === 'user' 
-                        ? 'text-[#403E43]/10' 
+                        ? 'text-gray-500' 
                         : 'text-gray-500'
                     }`}>
                       {msg.role === 'assistant' && (
@@ -179,7 +198,7 @@ export default function ChatInterface() {
                           )}
                         </>
                       )}
-                      <span className={`${msg.role === 'user' ? 'text-[#403E43]/10' : 'text-black'}`}>
+                      <span className="text-xs">
                         {new Date(msg.timestamp).toLocaleTimeString()}
                       </span>
                     </div>
@@ -202,10 +221,12 @@ export default function ChatInterface() {
         <form onSubmit={handleSendMessage} className="flex flex-col space-y-2">
           <div className="flex items-start gap-2">
             <Textarea
-              placeholder="Ask your question..."
+              placeholder="Ask your question... (Press Enter to send)"
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="min-h-[100px] resize-none bg-white text-black border-gray-700 focus:ring-white/20"
+              onChange={handleTextareaResize}
+              onKeyDown={handleKeyDown}
+              className={`min-h-[${textareaHeight}] resize-y bg-white text-black border-gray-700 focus:ring-white/20`}
+              style={{ height: textareaHeight, maxHeight: '300px' }}
             />
             <VoiceInput
               onTranscription={handleVoiceInput}
