@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Thread, ChatMessage } from '@/types/chat';
@@ -126,10 +127,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Add thread hiding functionality
   const hideThread = async (threadId: string) => {
     try {
-      // Update in database - explicitly define the data object
+      // Update in database with a type assertion for the Supabase update
       const { error } = await supabase
         .from('chat_threads')
-        .update({ hidden: true } as { hidden: boolean })
+        .update({ hidden: true } as any)
         .eq('id', threadId);
       
       if (error) throw error;
@@ -160,10 +161,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   
   const unhideThread = async (threadId: string) => {
     try {
-      // Update in database - explicitly define the data object
+      // Update in database with a type assertion for the Supabase update
       const { error } = await supabase
         .from('chat_threads')
-        .update({ hidden: false } as { hidden: boolean })
+        .update({ hidden: false } as any)
         .eq('id', threadId);
       
       if (error) throw error;
@@ -183,10 +184,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   
   const showAllHiddenThreads = async () => {
     try {
-      // Update in database - explicitly define the data object
+      // Update in database with a type assertion for the Supabase update
       const { error } = await supabase
         .from('chat_threads')
-        .update({ hidden: false } as { hidden: boolean })
+        .update({ hidden: false } as any)
         .eq('user_id', user?.id);
       
       if (error) throw error;
@@ -208,10 +209,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const newThread = await createNewThread();
       if (!newThread) return;
       
-      // Update in database - explicitly define the data object
+      // Update in database with a type assertion for the Supabase update
       const { error } = await supabase
         .from('chat_threads')
-        .update({ hidden: true } as { hidden: boolean })
+        .update({ hidden: true } as any)
         .eq('user_id', user?.id)
         .neq('id', newThread.id);
       
