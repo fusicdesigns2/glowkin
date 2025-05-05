@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,7 +16,7 @@ import { useActiveModels } from '@/hooks/useActiveModels';
 import { useCostPrediction } from '@/hooks/useCostPrediction';
 
 // Available OpenAI models that we support
-const SUPPORTED_MODELS = ['gpt-4o-mini', 'gpt-4o', 'gpt-4.5-preview'];
+const SUPPORTED_MODELS = ['GPT-4o-mini', 'GPT-4o'];
 
 export default function ChatInterface() {
   const { 

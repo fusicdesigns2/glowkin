@@ -108,33 +108,22 @@ serve(async (req) => {
       }
     }
 
-    // Define the supported models with exact casing that OpenAI expects
-    const SUPPORTED_MODELS = {
-      'gpt-4o-mini': 'gpt-4o-mini',
-      'gpt-4o': 'gpt-4o',
-      'gpt-4.5-preview': 'gpt-4.5-preview',
-      // Allow for legacy capitalized formats
-      'GPT-4o-mini': 'gpt-4o-mini',
-      'GPT-4o': 'gpt-4o',
-      'GPT-4.5-preview': 'gpt-4.5-preview'
-    };
-
-    // Default model if none is specified
-    let selectedModel = 'gpt-4o-mini';
+    // Validate and map the model parameter to supported models
+    let selectedModel = 'GPT-4o-mini'; // Default to GPT-4o-mini
     
-    // If a model was specified, map it to the proper format
+    // If a model was specified, validate it against our supported models
     if (model) {
-      const requestedModel = model.toLowerCase();
+      // Normalize model names (handle case where user might send "gpt-4o" instead of "GPT-4o")
+      const normalizedModel = model.toLowerCase();
       
-      // Find a match in our supported models (case-insensitive)
-      const matchedModel = Object.keys(SUPPORTED_MODELS).find(
-        m => m.toLowerCase() === requestedModel
-      );
-      
-      if (matchedModel) {
-        selectedModel = SUPPORTED_MODELS[matchedModel];
-      } else {
+      // Map to supported models
+      if (normalizedModel === 'gpt-4o') {
+        selectedModel = 'GPT-4o';
+      } else if (normalizedModel !== 'gpt-4o-mini') {
+        // If unrecognized model, log the request but use default
         console.log(`Requested unsupported model: ${model}, using default model: ${selectedModel}`);
+      } else {
+        selectedModel = 'GPT-4o-mini';
       }
     }
     
