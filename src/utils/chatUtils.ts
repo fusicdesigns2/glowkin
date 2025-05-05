@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Thread, ChatMessage, ThreadMessage, ModelCost } from '@/types/chat';
 
@@ -126,9 +127,14 @@ export const saveThreadsToStorage = (userId: string, threads: Thread[]): void =>
 
 export const sendChatMessage = async (messages: ChatMessage[], generateImage: boolean = false, model: string = 'gpt-4o-mini') => {
   try {
-    // Ensure we're using a valid model name
-    const validModel = ['gpt-4o-mini', 'gpt-4o', 'gpt-4.5-preview'].includes(model) ? 
-      model : 'gpt-4o-mini';
+    // Define the supported models
+    const SUPPORTED_MODELS = ['gpt-4o-mini', 'gpt-4o', 'gpt-4.5-preview'];
+    
+    // Normalize the model name to lowercase for consistency
+    const normalizedModel = model ? model.toLowerCase() : 'gpt-4o-mini';
+    
+    // Check if the model is supported (case-insensitive)
+    const validModel = SUPPORTED_MODELS.find(m => m.toLowerCase() === normalizedModel) || 'gpt-4o-mini';
       
     console.log('Sending chat messages to edge function:', messages, 'using model:', validModel);
     
@@ -184,7 +190,7 @@ export const sendChatMessage = async (messages: ChatMessage[], generateImage: bo
     const messageContent = response.data.choices[0]?.message?.content;
     const inputTokens = response.data.usage?.prompt_tokens || 0;
     const outputTokens = response.data.usage?.completion_tokens || 0;
-    const usedModel = response.data.model || model;
+    const usedModel = response.data.model || validModel;
 
     return {
       content: messageContent,

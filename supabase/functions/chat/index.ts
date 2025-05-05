@@ -108,28 +108,37 @@ serve(async (req) => {
       }
     }
 
-    // Validate and map the model parameter to supported models
-    let selectedModel = 'gpt-4o-mini'; // Default to gpt-4o-mini
+    // Define the supported models with exact casing that OpenAI expects
+    const SUPPORTED_MODELS = {
+      'gpt-4o-mini': 'gpt-4o-mini',
+      'gpt-4o': 'gpt-4o',
+      'gpt-4.5-preview': 'gpt-4.5-preview',
+      // Allow for legacy capitalized formats
+      'GPT-4o-mini': 'gpt-4o-mini',
+      'GPT-4o': 'gpt-4o',
+      'GPT-4.5-preview': 'gpt-4.5-preview'
+    };
+
+    // Default model if none is specified
+    let selectedModel = 'gpt-4o-mini';
     
-    // If a model was specified, validate it against our supported models
+    // If a model was specified, map it to the proper format
     if (model) {
-      // Normalize model names (handle case where user might send "GPT-4o" instead of "gpt-4o")
-      const normalizedModel = model.toLowerCase();
+      const requestedModel = model.toLowerCase();
       
-      // Map to supported models
-      if (normalizedModel === 'gpt-4o') {
-        selectedModel = 'gpt-4o';
-      } else if (normalizedModel === 'gpt-4.5-preview') {
-        selectedModel = 'gpt-4.5-preview';
-      } else if (normalizedModel !== 'gpt-4o-mini') {
-        // If unrecognized model, log the request but use default
-        console.log(`Requested unsupported model: ${model}, using default model: ${selectedModel}`);
+      // Find a match in our supported models (case-insensitive)
+      const matchedModel = Object.keys(SUPPORTED_MODELS).find(
+        m => m.toLowerCase() === requestedModel
+      );
+      
+      if (matchedModel) {
+        selectedModel = SUPPORTED_MODELS[matchedModel];
       } else {
-        selectedModel = 'gpt-4o-mini';
+        console.log(`Requested unsupported model: ${model}, using default model: ${selectedModel}`);
       }
     }
     
-    console.log('Processing chat request with messages:', JSON.stringify(messages).substring(0, 100) + '...', 'using model:', selectedModel);
+    console.log('Processing chat request with model:', selectedModel);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
