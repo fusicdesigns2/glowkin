@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
@@ -108,26 +107,7 @@ serve(async (req) => {
       }
     }
 
-    // Validate and map the model parameter to supported models
-    let selectedModel = 'GPT-4o-mini'; // Default to GPT-4o-mini
-    
-    // If a model was specified, validate it against our supported models
-    if (model) {
-      // Normalize model names (handle case where user might send "gpt-4o" instead of "GPT-4o")
-      const normalizedModel = model.toLowerCase();
-      
-      // Map to supported models
-      if (normalizedModel === 'gpt-4o') {
-        selectedModel = 'GPT-4o';
-      } else if (normalizedModel !== 'gpt-4o-mini') {
-        // If unrecognized model, log the request but use default
-        console.log(`Requested unsupported model: ${model}, using default model: ${selectedModel}`);
-      } else {
-        selectedModel = 'GPT-4o-mini';
-      }
-    }
-    
-    console.log('Processing chat request with model:', selectedModel);
+    console.log('Processing chat request with model:', model);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -136,7 +116,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: selectedModel,
+        model: model,
         messages: [
           { role: 'system', content: 'You are a helpful AI assistant.' },
           ...messages.map(msg => ({
@@ -177,7 +157,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       ...responseData,
       usage: responseData.usage || { total_tokens: 0 },
-      model: selectedModel // Return the model that was actually used
+      model: model // Return the model that was actually used
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,18 +31,15 @@ export default function ChatInterface() {
   const [modelCosts, setModelCosts] = useState<Record<string, ModelCost>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { data: activeModels, isLoading: isLoadingModels } = useActiveModels();
-  const [selectedModelState, setSelectedModelState] = useState<string>(SUPPORTED_MODELS[0]);
+  const [selectedModelState, setSelectedModelState] = useState<string>('');
   const [textareaHeight, setTextareaHeight] = useState<string>('100px');
   const { predictedCost, predictionDate } = useCostPrediction(selectedModelState, message);
 
   useEffect(() => {
     if (activeModels && activeModels.length > 0 && !selectedModelState) {
       const cheapestModel = [...activeModels].sort((a, b) => a.out_cost - b.out_cost)[0];
-      // Ensure we're using a supported model name
-      const modelName = SUPPORTED_MODELS.includes(cheapestModel.model) ? 
-        cheapestModel.model : SUPPORTED_MODELS[0];
-      setSelectedModelState(modelName);
-      setSelectedModel(modelName);
+      setSelectedModelState(cheapestModel.model);
+      setSelectedModel(cheapestModel.model);
     }
   }, [activeModels, setSelectedModel, selectedModelState]);
 
@@ -83,14 +79,10 @@ export default function ChatInterface() {
     e.preventDefault();
     if (!message.trim() || !user || !profile) return;
     
-    // Ensure we're using a supported model
-    const modelToUse = SUPPORTED_MODELS.includes(selectedModelState) ? 
-      selectedModelState : SUPPORTED_MODELS[0];
-    
     if (!selectedModelState && activeModels && activeModels.length > 0) {
-      await sendMessage(message.trim(), estimatedCost, modelToUse);
+      await sendMessage(message.trim(), estimatedCost, activeModels[0].model);
     } else {
-      await sendMessage(message.trim(), estimatedCost, modelToUse);
+      await sendMessage(message.trim(), estimatedCost, selectedModelState);
     }
     setMessage('');
   };
@@ -100,11 +92,8 @@ export default function ChatInterface() {
   };
 
   const handleModelChange = (model: string) => {
-    // Ensure we're using a supported model
-    const modelToUse = SUPPORTED_MODELS.includes(model) ? 
-      model : SUPPORTED_MODELS[0];
-    setSelectedModelState(modelToUse);
-    setSelectedModel(modelToUse);
+    setSelectedModelState(model);
+    setSelectedModel(model);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -277,9 +266,9 @@ export default function ChatInterface() {
                   <SelectValue placeholder="Select model" />
                 </SelectTrigger>
                 <SelectContent>
-                  {SUPPORTED_MODELS.map((model) => (
-                    <SelectItem key={model} value={model}>
-                      {model}
+                  {activeModels?.map((model) => (
+                    <SelectItem key={model.model} value={model.model}>
+                      {model.model}
                     </SelectItem>
                   ))}
                 </SelectContent>

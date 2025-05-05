@@ -124,13 +124,9 @@ export const saveThreadsToStorage = (userId: string, threads: Thread[]): void =>
   localStorage.setItem(`maimai_threads_${userId}`, JSON.stringify(threads));
 };
 
-export const sendChatMessage = async (messages: ChatMessage[], generateImage: boolean = false, model: string = 'GPT-4o-mini') => {
+export const sendChatMessage = async (messages: ChatMessage[], generateImage: boolean = false, model: string = '') => {
   try {
-    // Ensure we're using a valid model name
-    const validModel = ['GPT-4o-mini', 'GPT-4o'].includes(model) ? 
-      model : 'GPT-4o-mini';
-      
-    console.log('Sending chat messages to edge function:', messages, 'using model:', validModel);
+    console.log('Sending chat messages to edge function:', messages, 'using model:', model);
     
     const response = await supabase.functions.invoke('chat', {
       body: {
@@ -139,7 +135,7 @@ export const sendChatMessage = async (messages: ChatMessage[], generateImage: bo
           content: msg.content
         })),
         generateImage,
-        model: validModel
+        model: model
       }
     });
 
