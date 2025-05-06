@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Thread, ChatMessage } from '@/types/chat';
@@ -19,7 +18,9 @@ import {
   createThread,
   saveMessage,
   loadThreadsFromDB,
-  sendChatMessage 
+  sendChatMessage,
+  summarizeMessage,
+  updateMessageSummary
 } from '@/utils/chatUtils';
 import { isImageRequest, calculateImageCost } from '@/utils/imageUtils';
 
@@ -275,11 +276,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     refreshFunFact();
 
     try {
+      // Generate summary for the user message
+      const userMessageSummary = await summarizeMessage(content, 'user');
+
       const userMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'user',
         content,
         timestamp: new Date(),
+        summary: userMessageSummary
       };
 
       const updatedThread = {
@@ -298,7 +303,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         0, 
         0,
         0,
-        estimatedCost
+        estimatedCost,
+        userMessageSummary
       );
 
       if (isImageRequest(content)) {
@@ -387,6 +393,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         
         const tenXCost = Math.ceil(estimatedCost * 10);
 
+        // Generate summary for the assistant message
+        const assistantMessageSummary = await summarizeMessage(aiResponseContent, 'assistant');
+
         await saveMessage(
           updatedThread.id, 
           'assistant', 
@@ -395,7 +404,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           input_tokens, 
           output_tokens,
           tenXCost,
-          estimatedCost
+          estimatedCost,
+          assistantMessageSummary
         );
 
         const aiMessage: ChatMessage = {
@@ -406,7 +416,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           model: modelToUse,
           input_tokens: input_tokens,
           output_tokens: output_tokens,
-          tenXCost
+          tenXCost,
+          summary: assistantMessageSummary
         };
 
         const finalThread = {

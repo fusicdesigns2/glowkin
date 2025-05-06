@@ -29,7 +29,8 @@ export const saveMessage = async (
   inputTokens: number,
   outputTokens: number,
   tenXCost: number = 0,
-  predictedCost: number | null = null // Add predictedCost parameter
+  predictedCost: number | null = null,
+  summary: string | null = null
 ): Promise<void> => {
   if (!threadId || !isValidUUID(threadId)) {
     throw new Error(`Invalid thread ID format: ${threadId}`);
@@ -51,8 +52,21 @@ export const saveMessage = async (
       output_tokens: outputTokens,
       "10x_cost": tenXCost,
       credit_cost: creditCost,
-      predicted_cost: predictedCost // Add predicted cost to the insert
+      predicted_cost: predictedCost,
+      summary
     });
+
+  if (error) throw error;
+};
+
+export const updateMessageSummary = async (
+  messageId: string,
+  summary: string
+): Promise<void> => {
+  const { error } = await supabase
+    .from('chat_messages')
+    .update({ summary })
+    .eq('id', messageId);
 
   if (error) throw error;
 };
@@ -91,7 +105,8 @@ export const loadThreadsFromDB = async (userId: string): Promise<Thread[]> => {
         model: msg.model,
         input_tokens: msg.input_tokens,
         output_tokens: msg.output_tokens,
-        tenXCost: msg["10x_cost"]
+        tenXCost: msg["10x_cost"],
+        summary: msg.summary
       })),
       lastUpdated: new Date(thread.updated_at),
       hidden: thread.hidden
@@ -124,13 +139,95 @@ export const saveThreadsToStorage = (userId: string, threads: Thread[]): void =>
   localStorage.setItem(`maimai_threads_${userId}`, JSON.stringify(threads));
 };
 
+export const summarizeMessage = async (content: string, role: 'user' | 'assistant'): Promise<string | null> => {
+  try {
+    console.log('Generating summary for', role, 'message');
+    
+    const response = await supabase.functions.invoke('chat', {
+      body: {
+        summarize: {
+          content,
+          role
+        }
+      }
+    });
+
+    if (response.error) {
+      console.error('Error in summarize message:', response.error);
+      return null;
+    }
+
+    if (response.data?.error) {
+      console.error('Error from summarization service:', response.data.error);
+      return null;
+    }
+
+    return response.data.summary;
+  } catch (error) {
+    console.error('Exception in summarizeMessage:', error);
+    return null;
+  }
+};
+
+export const optimizeMessagesForOpenAI = (messages: ChatMessage[]): ChatMessage[] => {
+  if (messages.length <= 3) {
+    return messages;
+  }
+
+  // Keep the system message if present
+  const systemMessages = messages.filter(msg => msg.role === 'system');
+  
+  // For the conversation history, use summaries when available
+  const conversationHistory = messages
+    .filter(msg => msg.role !== 'system')
+    // Take the last 20 messages that have summaries
+    .filter(msg => msg.summary)
+    .slice(-20);
+  
+  // Always include the full content of the last assistant message and the most recent user message
+  const lastAssistantIndex = messages.map(msg => msg.role).lastIndexOf('assistant');
+  const lastUserIndex = messages.map(msg => msg.role).lastIndexOf('user');
+  
+  let optimizedMessages: ChatMessage[] = [...systemMessages];
+  
+  // Add summarized history
+  conversationHistory.forEach(msg => {
+    optimizedMessages.push({
+      ...msg,
+      content: msg.summary || msg.content
+    });
+  });
+  
+  // Add the last assistant message with full content if it exists and wasn't added through summaries
+  if (lastAssistantIndex >= 0 && lastAssistantIndex !== messages.length - 1) {
+    const lastAssistantMsg = messages[lastAssistantIndex];
+    if (!optimizedMessages.some(m => m.id === lastAssistantMsg.id)) {
+      optimizedMessages.push(lastAssistantMsg);
+    }
+  }
+  
+  // Add the last user message with full content
+  if (lastUserIndex >= 0) {
+    const lastUserMsg = messages[lastUserIndex];
+    if (!optimizedMessages.some(m => m.id === lastUserMsg.id)) {
+      optimizedMessages.push(lastUserMsg);
+    }
+  }
+  
+  return optimizedMessages;
+};
+
 export const sendChatMessage = async (messages: ChatMessage[], generateImage: boolean = false, model: string = '') => {
   try {
     console.log('Sending chat messages to edge function:', messages, 'using model:', model);
     
+    // Optimize the messages before sending to OpenAI
+    const optimizedMessages = optimizeMessagesForOpenAI(messages);
+    console.log('Using optimized messages for OpenAI:', optimizedMessages.length, 'messages');
+
     const response = await supabase.functions.invoke('chat', {
       body: {
-        messages: messages.map(msg => ({
+        messages: optimizedMessages.map(msg => ({
           role: msg.role,
           content: msg.content
         })),

@@ -1,14 +1,13 @@
-
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: Date;
   model?: string;
   input_tokens?: number;
   output_tokens?: number;
   tenXCost?: number;
-  credit_cost?: number;
+  summary?: string | null;
 }
 
 export interface ThreadMessage {

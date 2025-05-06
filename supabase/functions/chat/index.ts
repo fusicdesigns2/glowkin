@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
@@ -12,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, generateImage, model } = await req.json()
+    const { messages, generateImage, model, summarize } = await req.json()
     const openAiKey = Deno.env.get('OPENAI_API_KEY')
 
     if (!openAiKey) {
@@ -23,6 +24,66 @@ serve(async (req) => {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
+    }
+
+    // Handle message summarization request
+    if (summarize) {
+      console.log('Processing summarization request');
+      const { content, role } = summarize;
+      
+      try {
+        const systemMessage = "You are a helpful assistant that specializes in summarizing text, with context, extract important information and capture tone and emotion, add it as One sentance and bullet points.";
+        
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            messages: [
+              { role: 'system', content: systemMessage },
+              { role: 'user', content: `Summarize this ${role} message: ${content}` }
+            ],
+            temperature: 0.5,
+            max_tokens: 250,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('OpenAI Summarization API error:', JSON.stringify(errorData));
+          return new Response(JSON.stringify({ 
+            error: errorData.error?.message || 'Error summarizing message',
+            errorCode: errorData.error?.code || 'summarization_error' 
+          }), {
+            status: response.status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const summaryData = await response.json();
+        const summary = summaryData.choices[0].message.content;
+        console.log('Successfully generated summary');
+        
+        return new Response(JSON.stringify({
+          summary,
+          model: "gpt-4o",
+          usage: summaryData.usage || { total_tokens: 0 }
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (summaryError) {
+        console.error('Exception in summarization:', summaryError);
+        return new Response(JSON.stringify({ 
+          error: `Summarization failed: ${summaryError.message}`,
+          errorCode: 'summarization_exception' 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     if (generateImage) {

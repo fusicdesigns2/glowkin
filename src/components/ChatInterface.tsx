@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,9 +14,8 @@ import ReactMarkdown from 'react-markdown';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useActiveModels } from '@/hooks/useActiveModels';
 import { useCostPrediction } from '@/hooks/useCostPrediction';
-
-// Available OpenAI models that we support
-const SUPPORTED_MODELS = ['GPT-4o-mini', 'GPT-4o'];
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { InfoIcon } from 'lucide-react';
 
 export default function ChatInterface() {
   const { 
@@ -197,6 +197,21 @@ export default function ChatInterface() {
                                 modelCosts[msg.model]
                               )).toFixed(10)}
                             </Badge>
+                          )}
+                          {msg.summary && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="cursor-help inline-flex items-center">
+                                    <InfoIcon className="h-3 w-3 mr-1" />
+                                    <span className="text-xs">Summary available</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p className="text-xs">{msg.summary}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
                         </>
                       )}
