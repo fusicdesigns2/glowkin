@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Thread, ChatMessage, ThreadMessage, ModelCost } from '@/types/chat';
 
@@ -180,39 +181,45 @@ export const optimizeMessagesForOpenAI = (messages: ChatMessage[]): ChatMessage[
   // Keep the system message if present
   const systemMessages = messages.filter(msg => msg.role === 'system');
   
-  // For the conversation history, use summaries when available or fall back to content
-  const conversationHistory = messages
-    .filter(msg => msg.role !== 'system')
-    // Take the last 20 messages
-    .slice(-20);
+  // For the conversation history, get non-system messages
+  const nonSystemMessages = messages
+    .filter(msg => msg.role !== 'system');
   
-  // Always include the full content of the last assistant message and the most recent user message
-  const lastAssistantIndex = messages.map(msg => msg.role).lastIndexOf('assistant');
-  const lastUserIndex = messages.map(msg => msg.role).lastIndexOf('user');
+  // Always include the full content of the last assistant message
+  const lastAssistantIndex = nonSystemMessages.map(msg => msg.role).lastIndexOf('assistant');
+  const lastUserIndex = nonSystemMessages.map(msg => msg.role).lastIndexOf('user');
   
   let optimizedMessages: ChatMessage[] = [...systemMessages];
   
+  // Add historical messages using summaries (up to 20 messages)
+  const historyMessages = nonSystemMessages.slice(0, -1); // Exclude the most recent message
+  
+  // Take up to the last 20 historical messages
+  const recentHistory = historyMessages.slice(-20);
+  
   // Add summarized history, falling back to content when no summary is available
-  conversationHistory.forEach(msg => {
+  recentHistory.forEach(msg => {
     optimizedMessages.push({
       ...msg,
       content: msg.summary || msg.content // Fall back to the original content if no summary
     });
   });
   
-  // Add the last assistant message with full content if it exists and wasn't added through summaries
-  if (lastAssistantIndex >= 0 && lastAssistantIndex !== messages.length - 1) {
-    const lastAssistantMsg = messages[lastAssistantIndex];
-    if (!optimizedMessages.some(m => m.id === lastAssistantMsg.id)) {
-      optimizedMessages.push(lastAssistantMsg);
+  // Always add the last user message with full content if not already included
+  if (lastUserIndex >= 0) {
+    const lastUserMsg = nonSystemMessages[lastUserIndex];
+    // Check if we haven't already added this message
+    if (!optimizedMessages.some(m => m.id === lastUserMsg.id)) {
+      optimizedMessages.push(lastUserMsg);
     }
   }
   
-  // Add the last user message with full content
-  if (lastUserIndex >= 0) {
-    const lastUserMsg = messages[lastUserIndex];
-    if (!optimizedMessages.some(m => m.id === lastUserMsg.id)) {
-      optimizedMessages.push(lastUserMsg);
+  // Always add the last assistant message with full content if it exists and wasn't already added
+  if (lastAssistantIndex >= 0 && lastAssistantIndex !== nonSystemMessages.length - 1) {
+    const lastAssistantMsg = nonSystemMessages[lastAssistantIndex];
+    // Check if we haven't already added this message
+    if (!optimizedMessages.some(m => m.id === lastAssistantMsg.id)) {
+      optimizedMessages.push(lastAssistantMsg);
     }
   }
   
