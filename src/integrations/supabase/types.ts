@@ -57,6 +57,7 @@ export type Database = {
           output_tokens: number
           predicted_cost: number | null
           role: string
+          summary: string | null
           thread_id: string | null
         }
         Insert: {
@@ -71,6 +72,7 @@ export type Database = {
           output_tokens?: number
           predicted_cost?: number | null
           role: string
+          summary?: string | null
           thread_id?: string | null
         }
         Update: {
@@ -85,6 +87,7 @@ export type Database = {
           output_tokens?: number
           predicted_cost?: number | null
           role?: string
+          summary?: string | null
           thread_id?: string | null
         }
         Relationships: [
