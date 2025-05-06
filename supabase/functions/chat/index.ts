@@ -151,7 +151,7 @@ serve(async (req) => {
         
         return new Response(JSON.stringify({
           url: imageData.data[0].url,
-          model: 'image-alpha-001',
+          model: 'dall-e-3',
           prompt: userPrompt // Return the original prompt for display
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

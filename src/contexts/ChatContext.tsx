@@ -10,6 +10,7 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuth } from './AuthContext';
 import { funFactsArray } from '@/data/funFacts';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,6 +56,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [threadModels, setThreadModels] = useState<Record<string, string>>({});
+  
+  // Add state for image confirmation
+  const [imageConfirmOpen, setImageConfirmOpen] = useState(false);
+  const [pendingImageRequest, setPendingImageRequest] = useState<{
+    content: string;
+    estimatedCost: number;
+    threadToUse: Thread | null;
+    userMessage: ChatMessage | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -244,6 +254,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Modified to handle image generation confirmation
   const sendMessage = async (content: string, estimatedCost: number, model?: string) => {
     if (!user || !profile) {
       toast.error('You need to be logged in to send messages');
@@ -272,9 +283,46 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }));
     }
 
+    // Check if this is potentially an image request
+    if (isImageRequest(content)) {
+      // Generate summary for the user message
+      const userMessageSummary = await summarizeMessage(content, 'user');
+
+      const userMessage: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        role: 'user',
+        content,
+        timestamp: new Date(),
+        summary: userMessageSummary
+      };
+
+      // Store the info needed for image generation
+      setPendingImageRequest({
+        content,
+        estimatedCost,
+        threadToUse,
+        userMessage
+      });
+      
+      // Show confirmation dialog instead of automatically generating
+      setImageConfirmOpen(true);
+      return;
+    }
+
+    // Regular message processing
+    await processRegularMessage(content, estimatedCost, threadToUse, modelToUse);
+  };
+  
+  // This function handles sending a regular non-image message
+  const processRegularMessage = async (
+    content: string, 
+    estimatedCost: number, 
+    threadToUse: Thread, 
+    modelToUse: string
+  ) => {
     setIsLoading(true);
     refreshFunFact();
-
+    
     try {
       // Generate summary for the user message
       const userMessageSummary = await summarizeMessage(content, 'user');
@@ -307,144 +355,214 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         userMessageSummary
       );
 
-      if (isImageRequest(content)) {
-        const imageCost = await calculateImageCost();
-        if (!window.confirm(
-          `This appears to be an image generation request. The following prompt will be used:\n\n"${content}"\n\nGenerating an image will cost ${imageCost} credits. Would you like to proceed?`
-        )) {
-          const cancelMessage: ChatMessage = {
-            id: `msg_${Date.now()}`,
-            role: 'assistant',
-            content: "Image generation was cancelled. How else can I help you?",
-            timestamp: new Date(),
-            model: 'gpt-4o-mini',
-          };
-          
-          setCurrentThread({
-            ...updatedThread,
-            messages: [...updatedThread.messages, cancelMessage],
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        const imageResponse = await sendChatMessage(updatedThread.messages, true);
-        
-        if (typeof imageResponse === 'string') {
-          toast.error(imageResponse);
-          return;
-        }
-        
-        if ('error' in imageResponse) {
-          setErrorDialogOpen(true);
-          return;
-        }
-
-        const { url: imageUrl, model } = imageResponse;
-
-        const { data: imageData } = await supabase
-          .from('chat_images')
-          .insert({
-            message_id: userMessage.id,
-            image_url: imageUrl,
-            prompt: content
-          })
-          .select()
-          .single();
-
-        const aiMessage: ChatMessage = {
-          id: `msg_${Date.now() + 1}`,
-          role: 'assistant',
-          content: `![Generated Image](${imageUrl})\n\nHere's the image you requested. Let me know if you'd like any adjustments.`,
-          timestamp: new Date(),
-          model: model,
-          tenXCost: Math.ceil(imageCost * 10)
-        };
-
-        await saveMessage(
-          updatedThread.id,
-          'assistant',
-          aiMessage.content,
-          model,
-          0,
-          0,
-          aiMessage.tenXCost,
-          estimatedCost
-        );
-
-        await updateCredits(profile.credits - imageCost);
-        toast.success(`${imageCost} credits used for this image`);
-
-        setCurrentThread({
-          ...updatedThread,
-          messages: [...updatedThread.messages, aiMessage],
-        });
-
-      } else {
-        // Use the thread's stored model or the passed model
-        const aiResponse = await sendChatMessage(updatedThread.messages, false, modelToUse);
-        
-        if (typeof aiResponse === 'string') {
-          toast.error(aiResponse);
-          return;
-        }
-        
-        const { content: aiResponseContent, input_tokens, output_tokens, model: usedModel } = aiResponse;
-        
-        const tenXCost = Math.ceil(estimatedCost * 10);
-
-        // Generate summary for the assistant message
-        const assistantMessageSummary = await summarizeMessage(aiResponseContent, 'assistant');
-
-        await saveMessage(
-          updatedThread.id, 
-          'assistant', 
-          aiResponseContent, 
-          usedModel, 
-          input_tokens, 
-          output_tokens,
-          tenXCost,
-          estimatedCost,
-          assistantMessageSummary
-        );
-
-        const aiMessage: ChatMessage = {
-          id: `msg_${Date.now() + 1}`,
-          role: 'assistant',
-          content: aiResponseContent,
-          timestamp: new Date(),
-          model: modelToUse,
-          input_tokens: input_tokens,
-          output_tokens: output_tokens,
-          tenXCost,
-          summary: assistantMessageSummary
-        };
-
-        const finalThread = {
-          ...updatedThread,
-          messages: [...updatedThread.messages, aiMessage],
-          lastUpdated: new Date(),
-        };
-
-        await updateCredits(profile.credits - estimatedCost);
-        toast.success(`${estimatedCost} credits used for this response`);
-
-        setCurrentThread(finalThread);
-        setThreads(prev => {
-          const existingIndex = prev.findIndex(t => t.id === finalThread.id);
-          if (existingIndex >= 0) {
-            return prev.map(t => t.id === finalThread.id ? finalThread : t);
-          } else {
-            return [finalThread, ...prev];
-          }
-        });
+      // Use the thread's stored model or the passed model
+      const aiResponse = await sendChatMessage(updatedThread.messages, false, modelToUse);
+      
+      if (typeof aiResponse === 'string') {
+        toast.error(aiResponse);
+        return;
       }
+      
+      const { content: aiResponseContent, input_tokens, output_tokens, model: usedModel } = aiResponse;
+      
+      const tenXCost = Math.ceil(estimatedCost * 10);
+
+      // Generate summary for the assistant message
+      const assistantMessageSummary = await summarizeMessage(aiResponseContent, 'assistant');
+
+      await saveMessage(
+        updatedThread.id, 
+        'assistant', 
+        aiResponseContent, 
+        usedModel, 
+        input_tokens, 
+        output_tokens,
+        tenXCost,
+        estimatedCost,
+        assistantMessageSummary
+      );
+
+      const aiMessage: ChatMessage = {
+        id: `msg_${Date.now() + 1}`,
+        role: 'assistant',
+        content: aiResponseContent,
+        timestamp: new Date(),
+        model: modelToUse,
+        input_tokens: input_tokens,
+        output_tokens: output_tokens,
+        tenXCost,
+        summary: assistantMessageSummary
+      };
+
+      const finalThread = {
+        ...updatedThread,
+        messages: [...updatedThread.messages, aiMessage],
+        lastUpdated: new Date(),
+      };
+
+      await updateCredits(profile.credits - estimatedCost);
+      toast.success(`${estimatedCost} credits used for this response`);
+
+      setCurrentThread(finalThread);
+      setThreads(prev => {
+        const existingIndex = prev.findIndex(t => t.id === finalThread.id);
+        if (existingIndex >= 0) {
+          return prev.map(t => t.id === finalThread.id ? finalThread : t);
+        } else {
+          return [finalThread, ...prev];
+        }
+      });
     } catch (error) {
       console.error('Chat error:', error);
       toast.error(`Failed to get response: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // New function to handle image generation after confirmation
+  const handleImageGeneration = async () => {
+    if (!pendingImageRequest || !user || !profile) return;
+    
+    const { content, estimatedCost, threadToUse, userMessage } = pendingImageRequest;
+    if (!threadToUse || !userMessage) return;
+    
+    setIsLoading(true);
+    refreshFunFact();
+    
+    try {
+      // Add the user message to the thread
+      const updatedThread = {
+        ...threadToUse,
+        messages: [...threadToUse.messages, userMessage],
+        lastUpdated: new Date(),
+      };
+      
+      setCurrentThread(updatedThread);
+      
+      await saveMessage(
+        updatedThread.id, 
+        'user', 
+        content, 
+        'user-message', 
+        0, 
+        0,
+        0,
+        estimatedCost,
+        userMessage.summary
+      );
+      
+      const imageCost = await calculateImageCost();
+      
+      // Generate the image
+      const imageResponse = await sendChatMessage(updatedThread.messages, true);
+      
+      if (typeof imageResponse === 'string') {
+        toast.error(imageResponse);
+        return;
+      }
+      
+      if ('error' in imageResponse) {
+        setErrorDialogOpen(true);
+        return;
+      }
+      
+      const { url: imageUrl, model } = imageResponse;
+      
+      // Store image metadata
+      const { data: imageData } = await supabase
+        .from('chat_images')
+        .insert({
+          message_id: userMessage.id,
+          image_url: imageUrl,
+          prompt: content
+        })
+        .select()
+        .single();
+      
+      // Create AI response with image and download button
+      const aiMessage: ChatMessage = {
+        id: `msg_${Date.now() + 1}`,
+        role: 'assistant',
+        content: `![Generated Image](${imageUrl})\n\nHere's the image you requested. You can download it using the button below.\n\n<download-image url="${imageUrl}" prompt="${content.replace(/"/g, '&quot;')}"/>`,
+        timestamp: new Date(),
+        model: model,
+        tenXCost: Math.ceil(imageCost * 10)
+      };
+      
+      await saveMessage(
+        updatedThread.id,
+        'assistant',
+        aiMessage.content,
+        model,
+        0,
+        0,
+        aiMessage.tenXCost,
+        estimatedCost
+      );
+      
+      await updateCredits(profile.credits - imageCost);
+      toast.success(`${imageCost} credits used for this image`);
+      
+      setCurrentThread({
+        ...updatedThread,
+        messages: [...updatedThread.messages, aiMessage],
+      });
+      
+      setThreads(prev => {
+        const existingIndex = prev.findIndex(t => t.id === updatedThread.id);
+        if (existingIndex >= 0) {
+          return prev.map(t => t.id === updatedThread.id ? {
+            ...updatedThread,
+            messages: [...updatedThread.messages, aiMessage]
+          } : t);
+        } else {
+          return [{
+            ...updatedThread,
+            messages: [...updatedThread.messages, aiMessage]
+          }, ...prev];
+        }
+      });
+    } catch (error) {
+      console.error('Image generation error:', error);
+      toast.error(`Failed to generate image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+      setPendingImageRequest(null);
+    }
+  };
+  
+  // Handle cancellation of image generation
+  const handleCancelImageGeneration = async () => {
+    if (!pendingImageRequest || !user || !profile) return;
+    
+    const { content, estimatedCost, threadToUse, userMessage } = pendingImageRequest;
+    if (!threadToUse || !userMessage) return;
+    
+    // Add the user message to the thread
+    const updatedThread = {
+      ...threadToUse,
+      messages: [...threadToUse.messages, userMessage],
+      lastUpdated: new Date(),
+    };
+    
+    setCurrentThread(updatedThread);
+    
+    await saveMessage(
+      updatedThread.id, 
+      'user', 
+      content, 
+      'user-message', 
+      0, 
+      0,
+      0,
+      estimatedCost,
+      userMessage.summary
+    );
+    
+    // Process as regular message instead
+    await processRegularMessage(content, estimatedCost, updatedThread, threadModels[threadToUse.id] || selectedModel);
+    setPendingImageRequest(null);
   };
 
   const refreshFunFact = () => {
@@ -474,6 +592,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   return (
     <ChatContext.Provider value={value}>
       {children}
+      
+      {/* Error Dialog for when image generation fails */}
       <AlertDialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -491,6 +611,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Image Generation Confirmation Dialog */}
+      <ConfirmDialog
+        open={imageConfirmOpen}
+        onOpenChange={setImageConfirmOpen}
+        title="Generate an Image?"
+        description={`This appears to be an image generation request. Would you like to generate an image using DALL-E 3? This will cost approximately ${calculateImageCost} credits.`}
+        confirmText="Yes, Generate Image"
+        cancelText="No, Just Answer"
+        onConfirm={handleImageGeneration}
+        onCancel={handleCancelImageGeneration}
+      />
     </ChatContext.Provider>
   );
 }

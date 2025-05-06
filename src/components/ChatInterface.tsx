@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useActiveModels } from '@/hooks/useActiveModels';
 import { useCostPrediction } from '@/hooks/useCostPrediction';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { InfoIcon } from 'lucide-react';
+import { InfoIcon, Download } from 'lucide-react';
+import ImageDownload from './ImageDownload';
 
 export default function ChatInterface() {
   const { 
@@ -114,6 +114,29 @@ export default function ChatInterface() {
     setMessage(e.target.value);
   };
 
+  // Custom renderer to handle the download-image tag in markdown
+  const customRenderers = {
+    p: ({node, ...props}: any) => (
+      <p className={`my-4 ${props.className || ''}`} {...props} />
+    ),
+    img: ({node, ...props}: any) => (
+      <img 
+        {...props} 
+        className="max-w-full rounded-lg shadow-sm" 
+        alt={props.alt || 'Generated image'} 
+      />
+    ),
+    // Process custom download-image tags
+    element: ({node, ...props}: any) => {
+      if (node.tagName === 'download-image') {
+        const url = node.properties.url;
+        const prompt = node.properties.prompt;
+        return <ImageDownload imageUrl={url} prompt={prompt} />;
+      }
+      return <>{props.children}</>;
+    }
+  };
+
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh]">
@@ -146,82 +169,104 @@ export default function ChatInterface() {
         <div className="flex-grow">
           {currentThread?.messages && currentThread.messages.length > 0 ? (
             <div className="space-y-4">
-              {currentThread.messages.map((msg) => (
-                <div 
-                  key={msg.id} 
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
+              {currentThread.messages.map((msg) => {
+                // Process the message content to replace download-image tags
+                let processedContent = msg.content;
+                const downloadImageMatch = processedContent.match(/<download-image url="([^"]+)" prompt="([^"]+)"\/>/);
+                
+                if (downloadImageMatch) {
+                  const [fullMatch, imageUrl, prompt] = downloadImageMatch;
+                  // Keep the image but remove the tag for rendering
+                  processedContent = processedContent.replace(fullMatch, '');
+                }
+                
+                return (
                   <div 
-                    className={`max-w-[80%] p-3 rounded-lg ${
-                      msg.role === 'user' 
-                        ? 'bg-sidebar-accent text-black rounded-tr-none' 
-                        : 'bg-white border border-gray-200 rounded-tl-none shadow-sm'
-                    }`}
+                    key={msg.id} 
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <ReactMarkdown 
-                      className="prose prose-sm max-w-none" 
-                      components={{
-                        p: ({node, ...props}) => (
-                          <p className={`my-4 ${msg.role === 'user' ? 'text-black' : ''}`} {...props} />
-                        ),
-                        img: ({node, ...props}) => (
-                          <img 
-                            {...props} 
-                            className="max-w-full rounded-lg shadow-sm" 
-                            alt={props.alt || 'Generated image'} 
-                          />
-                        )
-                      }}
+                    <div 
+                      className={`max-w-[80%] p-3 rounded-lg ${
+                        msg.role === 'user' 
+                          ? 'bg-sidebar-accent text-black rounded-tr-none' 
+                          : 'bg-white border border-gray-200 rounded-tl-none shadow-sm'
+                      }`}
                     >
-                      {msg.content}
-                    </ReactMarkdown>
-                    
-                    <div className={`text-xs mt-1 flex items-center gap-2 flex-wrap ${
-                      msg.role === 'user' 
-                        ? 'text-gray-500' 
-                        : 'text-gray-500'
-                    }`}>
-                      {msg.role === 'assistant' && (
-                        <>
-                          <Badge variant="secondary" className="text-xs">
-                            {msg.model || 'unknown model'}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            in: {msg.input_tokens || 0} / out: {msg.output_tokens || 0} tokens
-                          </Badge>
-                          {msg.model && modelCosts[msg.model] && (
-                            <Badge variant="outline" className="text-xs">
-                              cost: ${(calculateTokenCosts(
-                                msg.input_tokens || 0,
-                                msg.output_tokens || 0,
-                                modelCosts[msg.model]
-                              )).toFixed(10)}
-                            </Badge>
-                          )}
-                          {msg.summary && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="cursor-help inline-flex items-center">
-                                    <InfoIcon className="h-3 w-3 mr-1" />
-                                    <span className="text-xs">Summary available</span>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-xs">
-                                  <p className="text-xs">{msg.summary}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </>
+                      <ReactMarkdown 
+                        className="prose prose-sm max-w-none" 
+                        components={customRenderers}
+                      >
+                        {processedContent}
+                      </ReactMarkdown>
+                      
+                      {/* Extract and render the download button if needed */}
+                      {msg.content.includes('<download-image') && (
+                        <div className="mt-2">
+                          {msg.content.match(/<download-image url="([^"]+)" prompt="([^"]+)"\/>/g)?.map((tag, index) => {
+                            const urlMatch = tag.match(/url="([^"]+)"/);
+                            const promptMatch = tag.match(/prompt="([^"]+)"/);
+                            
+                            if (urlMatch && promptMatch) {
+                              return (
+                                <ImageDownload 
+                                  key={index}
+                                  imageUrl={urlMatch[1]} 
+                                  prompt={promptMatch[1]} 
+                                />
+                              );
+                            }
+                            return null;
+                          })}
+                        </div>
                       )}
-                      <span className="text-xs">
-                        {new Date(msg.timestamp).toLocaleTimeString()}
-                      </span>
+                      
+                      <div className={`text-xs mt-1 flex items-center gap-2 flex-wrap ${
+                        msg.role === 'user' 
+                          ? 'text-gray-500' 
+                          : 'text-gray-500'
+                      }`}>
+                        {msg.role === 'assistant' && (
+                          <>
+                            <Badge variant="secondary" className="text-xs">
+                              {msg.model || 'unknown model'}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              in: {msg.input_tokens || 0} / out: {msg.output_tokens || 0} tokens
+                            </Badge>
+                            {msg.model && modelCosts[msg.model] && (
+                              <Badge variant="outline" className="text-xs">
+                                cost: ${(calculateTokenCosts(
+                                  msg.input_tokens || 0,
+                                  msg.output_tokens || 0,
+                                  modelCosts[msg.model]
+                                )).toFixed(10)}
+                              </Badge>
+                            )}
+                            {msg.summary && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="cursor-help inline-flex items-center">
+                                      <InfoIcon className="h-3 w-3 mr-1" />
+                                      <span className="text-xs">Summary available</span>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">
+                                    <p className="text-xs">{msg.summary}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </>
+                        )}
+                        <span className="text-xs">
+                          {new Date(msg.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div ref={messagesEndRef} />
             </div>
           ) : (
