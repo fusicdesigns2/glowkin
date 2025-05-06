@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Thread, ChatMessage, ThreadMessage, ModelCost } from '@/types/chat';
 
@@ -41,20 +42,23 @@ export const saveMessage = async (
     Math.ceil((inputTokens * activeModelCost.in_cost + outputTokens * activeModelCost.out_cost) * activeModelCost.markup * 100) : 
     0;
 
+  // Create message object and explicitly add summary as a field
+  const messageObject = {
+    thread_id: threadId,
+    role,
+    content,
+    model,
+    input_tokens: inputTokens,
+    output_tokens: outputTokens,
+    "10x_cost": tenXCost,
+    credit_cost: creditCost,
+    predicted_cost: predictedCost,
+    summary
+  };
+
   const { error } = await supabase
     .from('chat_messages')
-    .insert({
-      thread_id: threadId,
-      role,
-      content,
-      model,
-      input_tokens: inputTokens,
-      output_tokens: outputTokens,
-      "10x_cost": tenXCost,
-      credit_cost: creditCost,
-      predicted_cost: predictedCost,
-      summary
-    });
+    .insert(messageObject);
 
   if (error) throw error;
 };
@@ -106,7 +110,7 @@ export const loadThreadsFromDB = async (userId: string): Promise<Thread[]> => {
         input_tokens: msg.input_tokens,
         output_tokens: msg.output_tokens,
         tenXCost: msg["10x_cost"],
-        summary: msg.summary
+        summary: msg.summary  // Make sure to map the summary field
       })),
       lastUpdated: new Date(thread.updated_at),
       hidden: thread.hidden
