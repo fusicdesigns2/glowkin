@@ -1,3 +1,4 @@
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -19,6 +20,7 @@ export interface ThreadMessage {
   tokens_used: number;
   "10x_cost"?: number;
   created_at: Date;
+  summary?: string | null;
 }
 
 export interface Thread {
