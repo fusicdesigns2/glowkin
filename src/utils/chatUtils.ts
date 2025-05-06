@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Thread, ChatMessage, ThreadMessage, ModelCost } from '@/types/chat';
 
@@ -181,11 +180,10 @@ export const optimizeMessagesForOpenAI = (messages: ChatMessage[]): ChatMessage[
   // Keep the system message if present
   const systemMessages = messages.filter(msg => msg.role === 'system');
   
-  // For the conversation history, use summaries when available
+  // For the conversation history, use summaries when available or fall back to content
   const conversationHistory = messages
     .filter(msg => msg.role !== 'system')
-    // Take the last 20 messages that have summaries
-    .filter(msg => msg.summary)
+    // Take the last 20 messages
     .slice(-20);
   
   // Always include the full content of the last assistant message and the most recent user message
@@ -194,11 +192,11 @@ export const optimizeMessagesForOpenAI = (messages: ChatMessage[]): ChatMessage[
   
   let optimizedMessages: ChatMessage[] = [...systemMessages];
   
-  // Add summarized history
+  // Add summarized history, falling back to content when no summary is available
   conversationHistory.forEach(msg => {
     optimizedMessages.push({
       ...msg,
-      content: msg.summary || msg.content
+      content: msg.summary || msg.content // Fall back to the original content if no summary
     });
   });
   
