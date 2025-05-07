@@ -122,19 +122,37 @@ serve(async (req) => {
           }),
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('OpenAI Image API error:', JSON.stringify(errorData));
+        // Log the full response for debugging
+        console.log('OpenAI Image API status:', response.status);
+        const responseBody = await response.text();
+        console.log('OpenAI Image API response body:', responseBody);
+        
+        // Parse the response if possible
+        let imageData;
+        try {
+          imageData = JSON.parse(responseBody);
+        } catch (parseError) {
+          console.error('Error parsing response:', parseError);
           return new Response(JSON.stringify({ 
-            error: errorData.error?.message || 'Error generating image',
-            errorCode: errorData.error?.code || 'unknown_error' 
+            error: 'Invalid response format from OpenAI',
+            errorCode: 'parse_error',
+            rawResponse: responseBody
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
+        if (!response.ok) {
+          console.error('OpenAI Image API error:', JSON.stringify(imageData));
+          return new Response(JSON.stringify({ 
+            error: imageData.error?.message || 'Error generating image',
+            errorCode: imageData.error?.code || 'unknown_error' 
           }), {
             status: response.status,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
-
-        const imageData = await response.json();
         
         if (!imageData.data || !imageData.data[0] || !imageData.data[0].url) {
           console.error('Missing image URL in response:', JSON.stringify(imageData));
@@ -155,6 +173,7 @@ serve(async (req) => {
           prompt: userPrompt // Return the original prompt for display
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
         });
       } catch (imageError) {
         console.error('Exception in image generation:', imageError);
