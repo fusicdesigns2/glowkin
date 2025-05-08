@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,14 +9,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoadingScreen from './LoadingScreen';
 import VoiceInput from './VoiceInput';
 import { getActiveModelCost, calculateTokenCosts } from '@/utils/chatUtils';
-import { ModelCost } from '@/types/chat';
+import { ModelCost, KeyInfo } from '@/types/chat';
 import ReactMarkdown from 'react-markdown';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useActiveModels } from '@/hooks/useActiveModels';
 import { useCostPrediction } from '@/hooks/useCostPrediction';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { InfoIcon, Download } from 'lucide-react';
+import { InfoIcon, Download, MessageSquareText } from 'lucide-react';
 import ImageDownload from './ImageDownload';
+import KeyInfoDisplay from './KeyInfoDisplay';
 
 export default function ChatInterface() {
   const { 
@@ -34,6 +36,7 @@ export default function ChatInterface() {
   const [selectedModelState, setSelectedModelState] = useState<string>('');
   const [textareaHeight, setTextareaHeight] = useState<string>('100px');
   const { predictedCost, predictionDate } = useCostPrediction(selectedModelState, message);
+  const [showKeyInfo, setShowKeyInfo] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (activeModels && activeModels.length > 0 && !selectedModelState) {
@@ -103,6 +106,14 @@ export default function ChatInterface() {
         handleSendMessage(e);
       }
     }
+  };
+
+  // Toggle display of key info for a specific message
+  const toggleKeyInfo = (messageId: string) => {
+    setShowKeyInfo(prev => ({
+      ...prev,
+      [messageId]: !prev[messageId]
+    }));
   };
 
   // Handle textarea resizing
@@ -262,7 +273,27 @@ export default function ChatInterface() {
                         <span className="text-xs">
                           {new Date(msg.timestamp).toLocaleTimeString()}
                         </span>
+                        
+                        {/* Key Info Button - only for user messages with keyInfo */}
+                        {msg.role === 'user' && msg.keyInfo && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 p-1 text-xs flex items-center" 
+                            onClick={() => toggleKeyInfo(msg.id)}
+                          >
+                            <MessageSquareText className="h-3 w-3 mr-1" />
+                            {showKeyInfo[msg.id] ? 'Hide Details' : 'Show Details'}
+                          </Button>
+                        )}
                       </div>
+
+                      {/* Display Key Info when expanded */}
+                      {msg.keyInfo && showKeyInfo[msg.id] && (
+                        <div className="mt-2 p-2 bg-gray-100 rounded-md text-xs border border-gray-300">
+                          <KeyInfoDisplay keyInfo={msg.keyInfo} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
