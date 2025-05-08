@@ -1,10 +1,82 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
+import { load as loadSpaCy } from "https://deno.land/x/spacy_js@v0.0.5/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// Function to extract key information using spaCy
+async function extractKeyInfo(text) {
+  try {
+    console.log('Loading spaCy model...');
+    const nlp = await loadSpaCy("en_core_web_sm");
+    console.log('SpaCy model loaded successfully');
+
+    const doc = await nlp(text);
+    
+    // Extract entities
+    const entities = Array.from(doc.ents).map(ent => ({
+      text: ent.text,
+      label: ent.label,
+      start: ent.start,
+      end: ent.end
+    }));
+    
+    // Extract noun chunks (important phrases)
+    const nounChunks = Array.from(doc.noun_chunks).map(chunk => ({
+      text: chunk.text,
+      root: chunk.root.text
+    }));
+    
+    // Extract key verbs (actions)
+    const keyVerbs = Array.from(doc.tokens)
+      .filter(token => token.pos === "VERB")
+      .map(token => ({
+        text: token.text,
+        lemma: token.lemma
+      }));
+    
+    // Extract subject-verb-object relationships
+    const svoTriples = [];
+    for (const token of doc.tokens) {
+      if (token.dep === "nsubj") {
+        const subject = token.text;
+        const verb = token.head.text;
+        
+        // Find object related to this verb
+        const objectToken = Array.from(doc.tokens).find(t => 
+          t.head === token.head && (t.dep === "dobj" || t.dep === "pobj")
+        );
+        
+        if (objectToken) {
+          svoTriples.push({
+            subject,
+            verb,
+            object: objectToken.text
+          });
+        }
+      }
+    }
+    
+    // Return structured data
+    return {
+      entities,
+      nounChunks,
+      keyVerbs,
+      svoTriples,
+      extractionTime: new Date().toISOString(),
+      processingModel: "en_core_web_sm"
+    };
+  } catch (error) {
+    console.error('Error in spaCy processing:', error);
+    return {
+      error: `SpaCy processing failed: ${error.message}`,
+      extractionTime: new Date().toISOString()
+    };
+  }
 }
 
 serve(async (req) => {
@@ -83,6 +155,22 @@ serve(async (req) => {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
+      }
+    }
+
+    // Extract key information if this is a user message
+    let keyInfoExtraction = null;
+    if (messages && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === 'user') {
+        try {
+          console.log('Extracting key information from user message');
+          keyInfoExtraction = await extractKeyInfo(lastMessage.content);
+          console.log('Key information extracted successfully');
+        } catch (extractionError) {
+          console.error('Error extracting key information:', extractionError);
+          // Continue with the request even if extraction fails
+        }
       }
     }
 
@@ -170,7 +258,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({
           url: imageData.data[0].url,
           model: 'dall-e-3',
-          prompt: userPrompt // Return the original prompt for display
+          prompt: userPrompt, // Return the original prompt for display
+          keyInfo: keyInfoExtraction // Include the extracted key information
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
@@ -237,7 +326,8 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       ...responseData,
       usage: responseData.usage || { total_tokens: 0 },
-      model: model // Return the model that was actually used
+      model: model, // Return the model that was actually used
+      keyInfo: keyInfoExtraction // Include the extracted key information
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

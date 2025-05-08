@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { Thread, ChatMessage, ThreadMessage, ModelCost } from '@/types/chat';
+import { Thread, ChatMessage, ThreadMessage, ModelCost, KeyInfo } from '@/types/chat';
 
 export const getMessageCostEstimate = (content: string): number => {
   const charCount = content.length;
@@ -13,7 +12,8 @@ export const createThread = async (userId: string, title: string): Promise<strin
     .from('chat_threads')
     .insert({
       user_id: userId,
-      title
+      title,
+      context_data: [] // Initialize empty array for context data
     })
     .select()
     .single();
@@ -31,7 +31,8 @@ export const saveMessage = async (
   outputTokens: number,
   tenXCost: number = 0,
   predictedCost: number | null = null,
-  summary: string | null = null
+  summary: string | null = null,
+  keyInfo: KeyInfo | null = null
 ): Promise<void> => {
   if (!threadId || !isValidUUID(threadId)) {
     throw new Error(`Invalid thread ID format: ${threadId}`);
@@ -42,7 +43,7 @@ export const saveMessage = async (
     Math.ceil((inputTokens * activeModelCost.in_cost + outputTokens * activeModelCost.out_cost) * activeModelCost.markup * 100) : 
     0;
 
-  // Create message object and explicitly add summary as a field
+  // Create message object with all fields
   const messageObject = {
     thread_id: threadId,
     role,
@@ -53,7 +54,8 @@ export const saveMessage = async (
     "10x_cost": tenXCost,
     credit_cost: creditCost,
     predicted_cost: predictedCost,
-    summary
+    summary,
+    key_info: keyInfo
   };
 
   const { error } = await supabase
@@ -61,6 +63,46 @@ export const saveMessage = async (
     .insert(messageObject);
 
   if (error) throw error;
+
+  // If this is a user message with key information, update the thread's context data
+  if (role === 'user' && keyInfo) {
+    await updateThreadContextData(threadId, keyInfo);
+  }
+};
+
+export const updateThreadContextData = async (
+  threadId: string,
+  keyInfo: KeyInfo
+): Promise<void> => {
+  try {
+    // First get current context data
+    const { data, error } = await supabase
+      .from('chat_threads')
+      .select('context_data')
+      .eq('id', threadId)
+      .single();
+
+    if (error) throw error;
+
+    // Update with new context data
+    const currentContextData = data.context_data || [];
+    const updatedContextData = [...currentContextData, {
+      timestamp: new Date().toISOString(),
+      keyInfo
+    }];
+
+    // Keep only the most recent 50 context items to prevent excessive growth
+    const trimmedContextData = updatedContextData.slice(-50);
+
+    const { error: updateError } = await supabase
+      .from('chat_threads')
+      .update({ context_data: trimmedContextData })
+      .eq('id', threadId);
+
+    if (updateError) throw updateError;
+  } catch (error) {
+    console.error('Error updating thread context data:', error);
+  }
 };
 
 export const updateMessageSummary = async (
@@ -270,7 +312,10 @@ export const sendChatMessage = async (messages: ChatMessage[], generateImage: bo
     }
 
     if (generateImage) {
-      return response.data;
+      return {
+        ...response.data,
+        keyInfo: response.data.keyInfo // Include extracted key information
+      };
     }
 
     if (!response.data.choices || !response.data.choices.length) {
@@ -287,12 +332,14 @@ export const sendChatMessage = async (messages: ChatMessage[], generateImage: bo
     const inputTokens = response.data.usage?.prompt_tokens || 0;
     const outputTokens = response.data.usage?.completion_tokens || 0;
     const usedModel = response.data.model || model;
+    const keyInfo = response.data.keyInfo; // Extract key information from the response
 
     return {
       content: messageContent,
       input_tokens: inputTokens,
       output_tokens: outputTokens,
-      model: usedModel
+      model: usedModel,
+      keyInfo: keyInfo
     };
   } catch (error) {
     console.error('Error in sendChatMessage:', error);

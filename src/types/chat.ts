@@ -9,6 +9,7 @@ export interface ChatMessage {
   output_tokens?: number;
   tenXCost?: number;
   summary?: string | null;
+  keyInfo?: KeyInfo | null;
 }
 
 export interface ThreadMessage {
@@ -21,6 +22,7 @@ export interface ThreadMessage {
   "10x_cost"?: number;
   created_at: Date;
   summary?: string | null;
+  key_info?: KeyInfo | null;
 }
 
 export interface Thread {
@@ -29,6 +31,12 @@ export interface Thread {
   messages: ChatMessage[];
   lastUpdated: Date;
   hidden?: boolean;
+  contextData?: ContextData[];
+}
+
+export interface ContextData {
+  timestamp: string;
+  keyInfo: KeyInfo;
 }
 
 export interface DBThread {
@@ -38,6 +46,7 @@ export interface DBThread {
   created_at: Date;
   updated_at: Date;
   hidden: boolean;
+  context_data?: ContextData[];
 }
 
 export interface ModelCost {
@@ -48,4 +57,38 @@ export interface ModelCost {
   out_cost: number;
   active: boolean;
   markup: number;
+}
+
+// New types for spaCy extracted information
+export interface Entity {
+  text: string;
+  label: string;
+  start: number;
+  end: number;
+}
+
+export interface NounChunk {
+  text: string;
+  root: string;
+}
+
+export interface KeyVerb {
+  text: string;
+  lemma: string;
+}
+
+export interface SVOTriple {
+  subject: string;
+  verb: string;
+  object: string;
+}
+
+export interface KeyInfo {
+  entities: Entity[];
+  nounChunks: NounChunk[];
+  keyVerbs: KeyVerb[];
+  svoTriples: SVOTriple[];
+  extractionTime: string;
+  processingModel: string;
+  error?: string;
 }

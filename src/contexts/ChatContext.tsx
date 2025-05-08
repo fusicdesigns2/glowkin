@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Thread, ChatMessage } from '@/types/chat';
+import { Thread, ChatMessage, KeyInfo } from '@/types/chat';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -352,7 +352,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         0,
         0,
         estimatedCost,
-        userMessageSummary
+        userMessageSummary,
+        null // Initially no key info until we get it back from the API
       );
 
       // Use the thread's stored model or the passed model
@@ -363,12 +364,30 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
-      const { content: aiResponseContent, input_tokens, output_tokens, model: usedModel } = aiResponse;
+      const { content: aiResponseContent, input_tokens, output_tokens, model: usedModel, keyInfo } = aiResponse;
       
       const tenXCost = Math.ceil(estimatedCost * 10);
 
       // Generate summary for the assistant message
       const assistantMessageSummary = await summarizeMessage(aiResponseContent, 'assistant');
+
+      // If we have extracted key information from the user's message, update the message
+      if (keyInfo) {
+        // Update the user message with the extracted key information
+        const { error: updateError } = await supabase
+          .from('chat_messages')
+          .update({ key_info: keyInfo })
+          .eq('thread_id', updatedThread.id)
+          .eq('role', 'user')
+          .order('created_at', { ascending: false })
+          .limit(1);
+          
+        if (updateError) {
+          console.error('Error updating message with key info:', updateError);
+        } else {
+          console.log('Message updated with key information');
+        }
+      }
 
       await saveMessage(
         updatedThread.id, 
@@ -379,7 +398,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         output_tokens,
         tenXCost,
         estimatedCost,
-        assistantMessageSummary
+        assistantMessageSummary,
+        null // Assistant messages don't have key info
       );
 
       const aiMessage: ChatMessage = {
@@ -388,8 +408,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         content: aiResponseContent,
         timestamp: new Date(),
         model: modelToUse,
-        input_tokens: input_tokens,
-        output_tokens: output_tokens,
+        input_tokens,
+        output_tokens,
         tenXCost,
         summary: assistantMessageSummary
       };
