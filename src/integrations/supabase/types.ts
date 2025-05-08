@@ -53,6 +53,7 @@ export type Database = {
           credit_cost: number
           id: string
           input_tokens: number
+          key_info: Json | null
           model: string
           output_tokens: number
           predicted_cost: number | null
@@ -68,6 +69,7 @@ export type Database = {
           credit_cost?: number
           id?: string
           input_tokens?: number
+          key_info?: Json | null
           model: string
           output_tokens?: number
           predicted_cost?: number | null
@@ -83,6 +85,7 @@ export type Database = {
           credit_cost?: number
           id?: string
           input_tokens?: number
+          key_info?: Json | null
           model?: string
           output_tokens?: number
           predicted_cost?: number | null
@@ -178,6 +181,7 @@ export type Database = {
       }
       chat_threads: {
         Row: {
+          context_data: Json | null
           created_at: string | null
           hidden: boolean | null
           id: string
@@ -186,6 +190,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          context_data?: Json | null
           created_at?: string | null
           hidden?: boolean | null
           id?: string
@@ -194,6 +199,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          context_data?: Json | null
           created_at?: string | null
           hidden?: boolean | null
           id?: string
