@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Thread, ChatMessage, ThreadMessage, ModelCost, KeyInfo } from '@/types/chat';
+import { Thread, ChatMessage, ThreadMessage, ModelCost, KeyInfo, JsonValue } from '@/types/chat';
 
 export const getMessageCostEstimate = (content: string): number => {
   const charCount = content.length;
@@ -43,7 +43,7 @@ export const saveMessage = async (
     Math.ceil((inputTokens * activeModelCost.in_cost + outputTokens * activeModelCost.out_cost) * activeModelCost.markup * 100) : 
     0;
 
-  // Create message object with all fields
+  // Create message object with all fields - convert KeyInfo to a JSON-compatible object
   const messageObject = {
     thread_id: threadId,
     role,
@@ -55,7 +55,7 @@ export const saveMessage = async (
     credit_cost: creditCost,
     predicted_cost: predictedCost,
     summary,
-    key_info: keyInfo
+    key_info: keyInfo as unknown as JsonValue // Type assertion to handle the conversion
   };
 
   const { error } = await supabase
@@ -85,11 +85,14 @@ export const updateThreadContextData = async (
     if (error) throw error;
 
     // Update with new context data
-    const currentContextData = data.context_data || [];
-    const updatedContextData = [...currentContextData, {
+    const currentContextData = data?.context_data || [];
+    const newContextItem = {
       timestamp: new Date().toISOString(),
-      keyInfo
-    }];
+      keyInfo: keyInfo as unknown as JsonValue
+    };
+    
+    // Since we don't know the exact type, create a new array explicitly
+    const updatedContextData = [...(currentContextData as any[]), newContextItem];
 
     // Keep only the most recent 50 context items to prevent excessive growth
     const trimmedContextData = updatedContextData.slice(-50);
