@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
@@ -127,7 +126,12 @@ async function extractKeyInfo(text) {
     console.error('Error in text processing:', error);
     return {
       error: `Text processing failed: ${error.message}`,
-      extractionTime: new Date().toISOString()
+      extractionTime: new Date().toISOString(),
+      processingModel: "custom-rule-based",
+      entities: [],
+      nounChunks: [],
+      keyVerbs: [],
+      svoTriples: []
     };
   }
 }
@@ -228,6 +232,15 @@ serve(async (req) => {
         } catch (extractionError) {
           console.error('Error extracting key information:', extractionError);
           // Continue with the request even if extraction fails
+          keyInfoExtraction = {
+            error: `Text processing failed: ${extractionError.message}`,
+            extractionTime: new Date().toISOString(),
+            processingModel: "custom-rule-based",
+            entities: [],
+            nounChunks: [],
+            keyVerbs: [],
+            svoTriples: []
+          };
         }
       }
     }
