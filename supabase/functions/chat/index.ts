@@ -1,65 +1,118 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
-import { load as loadSpaCy } from "https://deno.land/x/spacy_js@v0.0.5/mod.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-// Function to extract key information using spaCy
+// Using native NLP functionality instead of spaCy which isn't available
 async function extractKeyInfo(text) {
   try {
-    console.log('Loading spaCy model...');
-    const nlp = await loadSpaCy("en_core_web_sm");
-    console.log('SpaCy model loaded successfully');
-
-    const doc = await nlp(text);
+    console.log('Extracting key information from text...');
     
-    // Extract entities
-    const entities = Array.from(doc.ents).map(ent => ({
-      text: ent.text,
-      label: ent.label,
-      start: ent.start,
-      end: ent.end
-    }));
+    // Simple entity extraction using regex patterns
+    const entities = [];
     
-    // Extract noun chunks (important phrases)
-    const nounChunks = Array.from(doc.noun_chunks).map(chunk => ({
-      text: chunk.text,
-      root: chunk.root.text
-    }));
+    // Extract email addresses
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+    const emails = text.match(emailRegex) || [];
+    emails.forEach(email => {
+      entities.push({
+        text: email,
+        label: 'EMAIL',
+        start: text.indexOf(email),
+        end: text.indexOf(email) + email.length
+      });
+    });
     
-    // Extract key verbs (actions)
-    const keyVerbs = Array.from(doc.tokens)
-      .filter(token => token.pos === "VERB")
-      .map(token => ({
-        text: token.text,
-        lemma: token.lemma
-      }));
+    // Extract URLs
+    const urlRegex = /https?:\/\/[^\s]+/g;
+    const urls = text.match(urlRegex) || [];
+    urls.forEach(url => {
+      entities.push({
+        text: url,
+        label: 'URL',
+        start: text.indexOf(url),
+        end: text.indexOf(url) + url.length
+      });
+    });
     
-    // Extract subject-verb-object relationships
-    const svoTriples = [];
-    for (const token of doc.tokens) {
-      if (token.dep === "nsubj") {
-        const subject = token.text;
-        const verb = token.head.text;
+    // Extract dates (simple pattern)
+    const dateRegex = /\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}/g;
+    const dates = text.match(dateRegex) || [];
+    dates.forEach(date => {
+      entities.push({
+        text: date,
+        label: 'DATE',
+        start: text.indexOf(date),
+        end: text.indexOf(date) + date.length
+      });
+    });
+    
+    // Extract potential names (capitalized words not at the start of sentences)
+    const nameRegex = /(?<![.!?]\s)[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*/g;
+    const names = text.match(nameRegex) || [];
+    const commonWords = ['I', 'A', 'The', 'This', 'That', 'It', 'You', 'We', 'They'];
+    names
+      .filter(name => !commonWords.includes(name))
+      .forEach(name => {
+        entities.push({
+          text: name,
+          label: 'POTENTIAL_NAME',
+          start: text.indexOf(name),
+          end: text.indexOf(name) + name.length
+        });
+      });
+    
+    // Extract noun chunks (simplified approach)
+    const words = text.split(/\s+/);
+    const nounChunks = [];
+    
+    // Simplistic noun chunking based on capitalized words and their neighboring words
+    for (let i = 0; i < words.length; i++) {
+      if (/^[A-Z][a-z]+$/.test(words[i]) && !commonWords.includes(words[i])) {
+        let chunk = words[i];
+        let root = words[i];
         
-        // Find object related to this verb
-        const objectToken = Array.from(doc.tokens).find(t => 
-          t.head === token.head && (t.dep === "dobj" || t.dep === "pobj")
-        );
-        
-        if (objectToken) {
-          svoTriples.push({
-            subject,
-            verb,
-            object: objectToken.text
-          });
+        // Look ahead for potential multi-word phrases
+        if (i < words.length - 1 && !/^[A-Z]/.test(words[i + 1])) {
+          chunk += ' ' + words[i + 1];
         }
+        
+        nounChunks.push({
+          text: chunk,
+          root: root
+        });
       }
     }
+    
+    // Extract key verbs (simplified)
+    const commonVerbs = ['is', 'are', 'was', 'were', 'be', 'being', 'been', 'have', 'has', 'had', 
+      'do', 'does', 'did', 'will', 'shall', 'should', 'would', 'can', 'could', 'may', 'might', 'must'];
+    
+    const verbRegex = /\b(ask|tell|want|need|create|update|delete|remove|add|change|help|make|find|search|get|build|run)\b/gi;
+    const verbMatches = [...text.matchAll(verbRegex)];
+    
+    const keyVerbs = verbMatches.map(match => ({
+      text: match[0],
+      lemma: match[0].toLowerCase()
+    }));
+    
+    // Basic subject-verb-object extraction
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    const svoTriples = [];
+    
+    sentences.forEach(sentence => {
+      const words = sentence.trim().split(/\s+/);
+      const verbIndices = words.findIndex(word => 
+        verbRegex.test(word.toLowerCase()) && !commonVerbs.includes(word.toLowerCase())
+      );
+      
+      if (verbIndices !== -1 && verbIndices > 0 && verbIndices < words.length - 1) {
+        svoTriples.push({
+          subject: words.slice(0, verbIndices).join(' '),
+          verb: words[verbIndices],
+          object: words.slice(verbIndices + 1).join(' ')
+        });
+      }
+    });
     
     // Return structured data
     return {
@@ -68,15 +121,20 @@ async function extractKeyInfo(text) {
       keyVerbs,
       svoTriples,
       extractionTime: new Date().toISOString(),
-      processingModel: "en_core_web_sm"
+      processingModel: "custom-rule-based"
     };
   } catch (error) {
-    console.error('Error in spaCy processing:', error);
+    console.error('Error in text processing:', error);
     return {
-      error: `SpaCy processing failed: ${error.message}`,
+      error: `Text processing failed: ${error.message}`,
       extractionTime: new Date().toISOString()
     };
   }
+}
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 serve(async (req) => {

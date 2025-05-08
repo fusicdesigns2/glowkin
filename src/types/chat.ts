@@ -59,7 +59,7 @@ export interface ModelCost {
   markup: number;
 }
 
-// New types for spaCy extracted information
+// New types for extracted information
 export interface Entity {
   text: string;
   label: string;
