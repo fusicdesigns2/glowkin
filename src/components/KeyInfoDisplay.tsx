@@ -16,6 +16,17 @@ const KeyInfoDisplay: React.FC<KeyInfoDisplayProps> = ({ keyInfo }) => {
     return <div className="text-red-500">Error extracting information: {error}</div>;
   }
 
+  // Check if we have any meaningful data to display
+  const hasData = 
+    (entities && entities.length > 0) || 
+    (nounChunks && nounChunks.length > 0) || 
+    (keyVerbs && keyVerbs.length > 0) || 
+    (svoTriples && svoTriples.length > 0);
+
+  if (!hasData) {
+    return <div className="text-gray-500 italic">No key information extracted</div>;
+  }
+
   return (
     <div className="key-info text-xs">
       <h4 className="font-semibold mb-1">Extracted Information</h4>

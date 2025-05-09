@@ -43,6 +43,8 @@ export const saveMessage = async (
     Math.ceil((inputTokens * activeModelCost.in_cost + outputTokens * activeModelCost.out_cost) * activeModelCost.markup * 100) : 
     0;
 
+  console.log('Saving message with keyInfo:', keyInfo ? 'present' : 'null');
+
   // Create message object with all fields - convert KeyInfo to a JSON-compatible object
   const messageObject = {
     thread_id: threadId,
@@ -66,7 +68,12 @@ export const saveMessage = async (
 
   // If this is a user message with key information, update the thread's context data
   if (role === 'user' && keyInfo) {
-    await updateThreadContextData(threadId, keyInfo);
+    try {
+      console.log('Updating thread context data for thread:', threadId);
+      await updateThreadContextData(threadId, keyInfo);
+    } catch (error) {
+      console.error('Failed to update thread context data:', error);
+    }
   }
 };
 
@@ -75,6 +82,7 @@ export const updateThreadContextData = async (
   keyInfo: KeyInfo
 ): Promise<void> => {
   try {
+    console.log('Starting updateThreadContextData for thread:', threadId);
     // First get current context data
     const { data, error } = await supabase
       .from('chat_threads')
@@ -82,7 +90,12 @@ export const updateThreadContextData = async (
       .eq('id', threadId)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching current context data:', error);
+      throw error;
+    }
+
+    console.log('Current context data:', data?.context_data);
 
     // Update with new context data
     const currentContextData = data?.context_data || [];
@@ -97,14 +110,22 @@ export const updateThreadContextData = async (
     // Keep only the most recent 50 context items to prevent excessive growth
     const trimmedContextData = updatedContextData.slice(-50);
 
+    console.log('Updating thread with new context data, items:', trimmedContextData.length);
+
     const { error: updateError } = await supabase
       .from('chat_threads')
       .update({ context_data: trimmedContextData })
       .eq('id', threadId);
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('Error updating thread context data:', updateError);
+      throw updateError;
+    }
+
+    console.log('Successfully updated thread context data');
   } catch (error) {
-    console.error('Error updating thread context data:', error);
+    console.error('Error in updateThreadContextData:', error);
+    throw error;
   }
 };
 

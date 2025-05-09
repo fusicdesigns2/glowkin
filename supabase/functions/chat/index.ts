@@ -34,7 +34,7 @@ async function extractKeyInfo(text) {
     });
     
     // Extract dates (simple pattern)
-    const dateRegex = /\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}/g;
+    const dateRegex = /\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}|\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}/gi;
     const dates = text.match(dateRegex) || [];
     dates.forEach(date => {
       entities.push({
@@ -43,6 +43,20 @@ async function extractKeyInfo(text) {
         start: text.indexOf(date),
         end: text.indexOf(date) + date.length
       });
+    });
+    
+    // Better date extraction for formats like "13th December 2025"
+    const betterDateRegex = /(?:\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})|(?:(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4})/gi;
+    const betterDates = text.match(betterDateRegex) || [];
+    betterDates.forEach(date => {
+      if (!entities.some(e => e.text.toLowerCase() === date.toLowerCase())) {
+        entities.push({
+          text: date,
+          label: 'DATE',
+          start: text.toLowerCase().indexOf(date.toLowerCase()),
+          end: text.toLowerCase().indexOf(date.toLowerCase()) + date.length
+        });
+      }
     });
     
     // Extract potential names (capitalized words not at the start of sentences)
@@ -82,11 +96,23 @@ async function extractKeyInfo(text) {
       }
     }
     
+    // Also extract important nouns even if not capitalized
+    const importantNouns = ['beach', 'volleyball', 'park', 'mountain', 'game', 'movie', 'book', 'sport', 'food', 'drink'];
+    words.forEach(word => {
+      const cleanWord = word.toLowerCase().replace(/[.,!?;:]/g, '');
+      if (importantNouns.includes(cleanWord)) {
+        nounChunks.push({
+          text: cleanWord,
+          root: cleanWord
+        });
+      }
+    });
+    
     // Extract key verbs (simplified)
     const commonVerbs = ['is', 'are', 'was', 'were', 'be', 'being', 'been', 'have', 'has', 'had', 
       'do', 'does', 'did', 'will', 'shall', 'should', 'would', 'can', 'could', 'may', 'might', 'must'];
     
-    const verbRegex = /\b(ask|tell|want|need|create|update|delete|remove|add|change|help|make|find|search|get|build|run)\b/gi;
+    const verbRegex = /\b(ask|tell|want|need|create|update|delete|remove|add|change|help|make|find|search|get|build|run|go|play)\b/gi;
     const verbMatches = [...text.matchAll(verbRegex)];
     
     const keyVerbs = verbMatches.map(match => ({
@@ -113,8 +139,7 @@ async function extractKeyInfo(text) {
       }
     });
     
-    // Return structured data
-    return {
+    const results = {
       entities,
       nounChunks,
       keyVerbs,
@@ -122,6 +147,10 @@ async function extractKeyInfo(text) {
       extractionTime: new Date().toISOString(),
       processingModel: "custom-rule-based"
     };
+    
+    console.log('Extracted key info:', JSON.stringify(results));
+    return results;
+    
   } catch (error) {
     console.error('Error in text processing:', error);
     return {
@@ -228,7 +257,12 @@ serve(async (req) => {
         try {
           console.log('Extracting key information from user message');
           keyInfoExtraction = await extractKeyInfo(lastMessage.content);
-          console.log('Key information extracted successfully');
+          console.log('Key information extracted successfully:', 
+            'entities:', keyInfoExtraction.entities.length,
+            'nounChunks:', keyInfoExtraction.nounChunks.length,
+            'keyVerbs:', keyInfoExtraction.keyVerbs.length,
+            'svoTriples:', keyInfoExtraction.svoTriples.length
+          );
         } catch (extractionError) {
           console.error('Error extracting key information:', extractionError);
           // Continue with the request even if extraction fails
