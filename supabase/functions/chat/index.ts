@@ -139,17 +139,45 @@ async function extractKeyInfo(text) {
       }
     });
     
+    // Make sure all objects are JSON-serializable and have no circular references
+    const sanitizedEntities = entities.map(e => ({
+      text: String(e.text || ''),
+      label: String(e.label || ''),
+      start: Number(e.start || 0),
+      end: Number(e.end || 0)
+    }));
+    
+    const sanitizedNounChunks = nounChunks.map(n => ({
+      text: String(n.text || ''),
+      root: String(n.root || '')
+    }));
+    
+    const sanitizedKeyVerbs = keyVerbs.map(v => ({
+      text: String(v.text || ''),
+      lemma: String(v.lemma || '')
+    }));
+    
+    const sanitizedSvoTriples = svoTriples.map(t => ({
+      subject: String(t.subject || ''),
+      verb: String(t.verb || ''),
+      object: String(t.object || '')
+    }));
+    
     const results = {
-      entities,
-      nounChunks,
-      keyVerbs,
-      svoTriples,
+      entities: sanitizedEntities,
+      nounChunks: sanitizedNounChunks,
+      keyVerbs: sanitizedKeyVerbs,
+      svoTriples: sanitizedSvoTriples,
       extractionTime: new Date().toISOString(),
       processingModel: "custom-rule-based"
     };
     
-    console.log('Extracted key info:', JSON.stringify(results));
-    return results;
+    // Verify the results can be properly serialized
+    const serialized = JSON.stringify(results);
+    const deserialized = JSON.parse(serialized);
+    
+    console.log('Extracted key info:', serialized);
+    return deserialized;
     
   } catch (error) {
     console.error('Error in text processing:', error);

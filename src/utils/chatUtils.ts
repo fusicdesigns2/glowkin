@@ -100,6 +100,18 @@ export const updateThreadContextData = async (
 ): Promise<void> => {
   try {
     console.log('Starting updateThreadContextData for thread:', threadId);
+    
+    // Validate inputs to ensure we have all required data
+    if (!threadId || !isValidUUID(threadId)) {
+      console.error('Invalid thread ID:', threadId);
+      throw new Error(`Invalid thread ID format: ${threadId}`);
+    }
+    
+    if (!keyInfo) {
+      console.error('No keyInfo provided for thread:', threadId);
+      throw new Error('KeyInfo is required');
+    }
+    
     // First get current context data
     const { data, error } = await supabase
       .from('chat_threads')
@@ -110,6 +122,11 @@ export const updateThreadContextData = async (
     if (error) {
       console.error('Error fetching current context data:', error);
       throw error;
+    }
+
+    if (!data) {
+      console.error('No thread found with ID:', threadId);
+      throw new Error(`Thread not found: ${threadId}`);
     }
 
     console.log('Current context data:', data?.context_data);
@@ -140,17 +157,35 @@ export const updateThreadContextData = async (
     console.log('Updating thread with new context data, items:', trimmedContextData.length);
     console.log('New context item:', JSON.stringify(newContextItem));
 
-    const { error: updateError } = await supabase
+    // Ensure the data is valid JSON before saving
+    try {
+      JSON.stringify(trimmedContextData);
+    } catch (jsonError) {
+      console.error('Context data is not valid JSON:', jsonError);
+      throw new Error('Failed to serialize context data');
+    }
+
+    // Add additional debugging before update
+    console.log('About to update thread table with context_data. Thread ID:', threadId);
+    console.log('Data type of context_data:', typeof trimmedContextData);
+    console.log('Is context_data an array?', Array.isArray(trimmedContextData));
+    
+    // Perform the update with detailed error handling
+    const { error: updateError, data: updateData } = await supabase
       .from('chat_threads')
       .update({ context_data: trimmedContextData })
-      .eq('id', threadId);
+      .eq('id', threadId)
+      .select();
 
     if (updateError) {
       console.error('Error updating thread context data:', updateError);
+      console.error('Error code:', updateError.code);
+      console.error('Error message:', updateError.message);
+      console.error('Error details:', updateError.details);
       throw updateError;
     }
 
-    console.log('Successfully updated thread context data');
+    console.log('Successfully updated thread context data. Response:', updateData);
   } catch (error) {
     console.error('Error in updateThreadContextData:', error);
     throw error;

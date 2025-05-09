@@ -8,11 +8,17 @@ interface KeyInfoDisplayProps {
 }
 
 const KeyInfoDisplay: React.FC<KeyInfoDisplayProps> = ({ keyInfo }) => {
-  if (!keyInfo) return null;
+  if (!keyInfo) {
+    console.log('No keyInfo provided to KeyInfoDisplay');
+    return <div className="text-gray-500 italic">No key information available</div>;
+  }
+
+  console.log('Rendering KeyInfoDisplay with:', keyInfo);
 
   const { entities, nounChunks, keyVerbs, svoTriples, extractionTime, processingModel, error } = keyInfo;
 
   if (error) {
+    console.error('Error in keyInfo:', error);
     return <div className="text-red-500">Error extracting information: {error}</div>;
   }
 
@@ -24,8 +30,16 @@ const KeyInfoDisplay: React.FC<KeyInfoDisplayProps> = ({ keyInfo }) => {
     (svoTriples && svoTriples.length > 0);
 
   if (!hasData) {
+    console.log('KeyInfoDisplay: No meaningful data to display');
     return <div className="text-gray-500 italic">No key information extracted</div>;
   }
+
+  console.log('KeyInfoDisplay rendering with data:', {
+    entities: entities?.length || 0,
+    nounChunks: nounChunks?.length || 0,
+    keyVerbs: keyVerbs?.length || 0,
+    svoTriples: svoTriples?.length || 0
+  });
 
   return (
     <div className="key-info text-xs">
@@ -86,7 +100,7 @@ const KeyInfoDisplay: React.FC<KeyInfoDisplayProps> = ({ keyInfo }) => {
       )}
       
       <div className="text-[10px] text-gray-500 mt-2">
-        Extracted at: {new Date(extractionTime).toLocaleString()}
+        Extracted at: {extractionTime ? new Date(extractionTime).toLocaleString() : 'Unknown time'}
         {processingModel && ` • Model: ${processingModel}`}
       </div>
     </div>
