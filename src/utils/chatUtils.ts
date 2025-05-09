@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Thread, ChatMessage, ThreadMessage, ModelCost, KeyInfo, JsonValue } from '@/types/chat';
 
@@ -43,7 +44,18 @@ export const saveMessage = async (
     Math.ceil((inputTokens * activeModelCost.in_cost + outputTokens * activeModelCost.out_cost) * activeModelCost.markup * 100) : 
     0;
 
-  console.log('Saving message with keyInfo:', keyInfo ? 'present' : 'null');
+  console.log('Saving message with keyInfo:', keyInfo ? JSON.stringify(keyInfo) : 'null');
+
+  // Validate keyInfo structure before saving
+  if (keyInfo) {
+    // Ensure all required fields exist
+    if (!keyInfo.entities) keyInfo.entities = [];
+    if (!keyInfo.nounChunks) keyInfo.nounChunks = [];
+    if (!keyInfo.keyVerbs) keyInfo.keyVerbs = [];
+    if (!keyInfo.svoTriples) keyInfo.svoTriples = [];
+    if (!keyInfo.extractionTime) keyInfo.extractionTime = new Date().toISOString();
+    if (!keyInfo.processingModel) keyInfo.processingModel = "unknown";
+  }
 
   // Create message object with all fields - convert KeyInfo to a JSON-compatible object
   const messageObject = {
@@ -60,11 +72,16 @@ export const saveMessage = async (
     key_info: keyInfo as unknown as JsonValue // Type assertion to handle the conversion
   };
 
+  console.log('Saving message with object:', JSON.stringify(messageObject));
+
   const { error } = await supabase
     .from('chat_messages')
     .insert(messageObject);
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error saving message:', error);
+    throw error;
+  }
 
   // If this is a user message with key information, update the thread's context data
   if (role === 'user' && keyInfo) {
@@ -97,11 +114,21 @@ export const updateThreadContextData = async (
 
     console.log('Current context data:', data?.context_data);
 
+    // Make a clean copy of keyInfo to avoid any circular references
+    const cleanKeyInfo = {
+      entities: keyInfo.entities || [],
+      nounChunks: keyInfo.nounChunks || [],
+      keyVerbs: keyInfo.keyVerbs || [],
+      svoTriples: keyInfo.svoTriples || [],
+      extractionTime: keyInfo.extractionTime || new Date().toISOString(),
+      processingModel: keyInfo.processingModel || "unknown"
+    };
+    
     // Update with new context data
     const currentContextData = data?.context_data || [];
     const newContextItem = {
       timestamp: new Date().toISOString(),
-      keyInfo: keyInfo as unknown as JsonValue
+      keyInfo: cleanKeyInfo
     };
     
     // Since we don't know the exact type, create a new array explicitly
@@ -111,6 +138,7 @@ export const updateThreadContextData = async (
     const trimmedContextData = updatedContextData.slice(-50);
 
     console.log('Updating thread with new context data, items:', trimmedContextData.length);
+    console.log('New context item:', JSON.stringify(newContextItem));
 
     const { error: updateError } = await supabase
       .from('chat_threads')
