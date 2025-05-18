@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export default function PDFUpload() {
   const { user, isLoading: authLoading } = useAuth();
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState<boolean>(false);
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -84,7 +84,7 @@ export default function PDFUpload() {
         navigate(`/pdf-analysis/${pdfData.id}`);
       }, 1500);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading PDF:', error);
       toast({
         title: "Upload failed",
