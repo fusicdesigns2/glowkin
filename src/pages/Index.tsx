@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import ChatInterface from '@/components/ChatInterface';
@@ -58,18 +57,18 @@ export default function Index() {
               </p>
               
               <div className="flex justify-center space-x-4">
-                <button 
+                <Button 
                   onClick={() => window.location.href = "/register"} 
                   className="px-6 py-3 bg-maiRed text-white font-semibold rounded-lg hover:bg-red-600 transition-colors"
                 >
                   Get Started
-                </button>
-                <button 
+                </Button>
+                <Button 
                   onClick={() => window.location.href = "/login"} 
                   className="px-6 py-3 bg-white text-maiDarkText border border-gray-300 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Log In
-                </button>
+                </Button>
               </div>
             </div>
             
@@ -117,12 +116,12 @@ export default function Index() {
                 Try Mai Mai risk-free with 5 complimentary credits. Experience the power of AI without
                 committing to an expensive subscription.
               </p>
-              <button 
+              <Button 
                 onClick={() => window.location.href = "/register"}
                 className="px-6 py-3 bg-maiRed text-white font-semibold rounded-lg hover:bg-red-600 transition-colors"
               >
                 Create Your Account
-              </button>
+              </Button>
             </div>
             
             <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center">
@@ -133,12 +132,13 @@ export default function Index() {
               <p className="text-gray-600 mb-6">
                 Upload your PDF designs for AI-powered content analysis. Extract content requirements easily and share with stakeholders.
               </p>
-              <button 
-                onClick={() => window.location.href = "/pdf-upload"}
-                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Try Content Gather
-              </button>
+              <Link to="/pdf-upload">
+                <Button 
+                  className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Try Content Gather
+                </Button>
+              </Link>
             </div>
           </div>
         )}

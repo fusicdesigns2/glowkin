@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Menu } from 'lucide-react';
+import { Menu, FileText } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,8 +10,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Link } from 'react-router-dom';
 
 export default function Header() {
   const { user, profile, signOut } = useAuth();
@@ -52,15 +54,28 @@ export default function Header() {
                   Credits <span className="font-semibold">{profile?.credits}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => window.location.href = "/dashboard"}>
-                  Dashboard
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard">Dashboard</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.location.href = "/buy-credits"}>
-                  Buy Credits
+                <DropdownMenuItem asChild>
+                  <Link to="/buy-credits">Buy Credits</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.location.href = "/usage"}>
-                  Usage Report
+                <DropdownMenuItem asChild>
+                  <Link to="/usage">Usage Report</Link>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Content Gather</DropdownMenuLabel>
+                  <DropdownMenuItem asChild>
+                    <Link to="/pdf-upload">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Upload PDF
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/pdf-list">My PDFs</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut}>
                   Log out
