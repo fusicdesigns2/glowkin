@@ -6,7 +6,8 @@ import ThreadList from '@/components/ThreadList';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loading } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, FileText } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Index() {
   const { user, isLoading } = useAuth();
@@ -110,7 +111,7 @@ export default function Index() {
               </div>
             </div>
             
-            <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center">
+            <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center mb-8">
               <h2 className="text-2xl font-bold mb-6">Get 5 Free Credits When You Sign Up</h2>
               <p className="text-gray-600 mb-6">
                 Try Mai Mai risk-free with 5 complimentary credits. Experience the power of AI without
@@ -123,9 +124,41 @@ export default function Index() {
                 Create Your Account
               </button>
             </div>
+            
+            <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center">
+              <div className="flex items-center justify-center mb-4">
+                <FileText className="h-10 w-10 text-blue-600" />
+              </div>
+              <h2 className="text-2xl font-bold mb-6">New: AI Content Gather</h2>
+              <p className="text-gray-600 mb-6">
+                Upload your PDF designs for AI-powered content analysis. Extract content requirements easily and share with stakeholders.
+              </p>
+              <button 
+                onClick={() => window.location.href = "/pdf-upload"}
+                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Try Content Gather
+              </button>
+            </div>
           </div>
         )}
       </main>
+
+      {user && (
+        <div className="bg-white border-t border-gray-200 py-3 px-6">
+          <div className="container mx-auto flex justify-center space-x-6">
+            <Link to="/dashboard" className="text-gray-600 hover:text-blue-600 transition-colors">
+              Dashboard
+            </Link>
+            <Link to="/pdf-upload" className="text-gray-600 hover:text-blue-600 transition-colors">
+              Upload PDF
+            </Link>
+            <Link to="/pdf-list" className="text-gray-600 hover:text-blue-600 transition-colors">
+              My PDFs
+            </Link>
+          </div>
+        </div>
+      )}
 
       <footer className="bg-[#403E43] text-white py-4 px-6 text-center">
         <p>&copy; {new Date().getFullYear()} Mai Mai. All rights reserved.</p>

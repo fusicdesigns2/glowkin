@@ -15,6 +15,9 @@ import BuyCredits from "./pages/BuyCredits";
 import Usage from "./pages/Usage";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
+import PDFUpload from "./pages/PDFUpload";
+import PDFAnalysis from "./pages/PDFAnalysis";
+import PDFList from "./pages/PDFList";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +36,9 @@ const App = () => (
               <Route path="/buy-credits" element={<BuyCredits />} />
               <Route path="/usage" element={<Usage />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/pdf-upload" element={<PDFUpload />} />
+              <Route path="/pdf-analysis/:id" element={<PDFAnalysis />} />
+              <Route path="/pdf-list" element={<PDFList />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ChatProvider>
