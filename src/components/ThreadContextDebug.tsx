@@ -40,7 +40,20 @@ const ThreadContextDebug: React.FC<ThreadContextDebugProps> = ({ threadId }) => 
         return;
       }
 
-      setContextData(data?.context_data || []);
+      // Fix: Ensure we're setting an array to our array state
+      if (data?.context_data) {
+        if (Array.isArray(data.context_data)) {
+          setContextData(data.context_data);
+        } else {
+          // Handle case where context_data exists but is not an array
+          console.error('context_data is not an array:', data.context_data);
+          setContextData([]);
+          setError('Thread context data is not in the expected format (not an array)');
+        }
+      } else {
+        // Handle case where context_data is null or undefined
+        setContextData([]);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(`Exception: ${message}`);
