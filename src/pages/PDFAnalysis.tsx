@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { Loader, FileText, Check } from 'lucide-react';
+import { Json } from '@/integrations/supabase/types';
 
 interface ContentElement {
   type: string;
@@ -74,8 +75,35 @@ export default function PDFAnalysis() {
         setAnalysisStatus(analysis.status);
         
         if (analysis.status === 'completed' && analysis.content) {
-          setContent(analysis.content as AnalysisContent);
-          setEditedNotes(analysis.content.notes || '');
+          // Safely cast the JSON data to our AnalysisContent type
+          try {
+            const parsedContent = analysis.content as Record<string, unknown>;
+            
+            // Validate the structure matches our expected interface
+            if (
+              typeof parsedContent.title === 'string' &&
+              Array.isArray(parsedContent.sections) &&
+              (typeof parsedContent.notes === 'string' || parsedContent.notes === undefined)
+            ) {
+              const typedContent: AnalysisContent = {
+                title: parsedContent.title,
+                sections: parsedContent.sections as ContentSection[],
+                notes: (parsedContent.notes as string) || ''
+              };
+              
+              setContent(typedContent);
+              setEditedNotes(typedContent.notes || '');
+            } else {
+              throw new Error('Invalid content structure');
+            }
+          } catch (error) {
+            console.error('Error parsing analysis content:', error);
+            toast({
+              title: "Content Error",
+              description: "Could not parse analysis content. The format may be invalid.",
+              variant: "destructive"
+            });
+          }
         }
       } else {
         // Start analysis if it doesn't exist
@@ -144,13 +172,42 @@ export default function PDFAnalysis() {
         
         if (data.status === 'completed' && data.content) {
           clearInterval(intervalId);
-          setContent(data.content as AnalysisContent);
-          setEditedNotes(data.content.notes || '');
           
-          toast({
-            title: "Analysis complete",
-            description: "The PDF analysis has been completed.",
-          });
+          // Safely cast the JSON data to our AnalysisContent type
+          try {
+            const parsedContent = data.content as Record<string, unknown>;
+            
+            // Validate the structure
+            if (
+              typeof parsedContent.title === 'string' &&
+              Array.isArray(parsedContent.sections) &&
+              (typeof parsedContent.notes === 'string' || parsedContent.notes === undefined)
+            ) {
+              const typedContent: AnalysisContent = {
+                title: parsedContent.title,
+                sections: parsedContent.sections as ContentSection[],
+                notes: (parsedContent.notes as string) || ''
+              };
+              
+              setContent(typedContent);
+              setEditedNotes(typedContent.notes || '');
+              
+              toast({
+                title: "Analysis complete",
+                description: "The PDF analysis has been completed.",
+              });
+            } else {
+              throw new Error('Invalid content structure');
+            }
+          } catch (error) {
+            console.error('Error parsing analysis content:', error);
+            toast({
+              title: "Content Error",
+              description: "Could not parse analysis content properly.",
+              variant: "destructive"
+            });
+            setAnalysisStatus('failed');
+          }
         } else if (data.status === 'failed') {
           clearInterval(intervalId);
           toast({
@@ -182,14 +239,17 @@ export default function PDFAnalysis() {
     
     try {
       // Update the content with the edited notes
-      const updatedContent = {
+      const updatedContent: AnalysisContent = {
         ...content,
         notes: editedNotes
       };
       
+      // Cast to Json type for Supabase
+      const jsonContent = updatedContent as unknown as Json;
+      
       const { error } = await supabase
         .from('pdf_analysis')
-        .update({ content: updatedContent })
+        .update({ content: jsonContent })
         .eq('id', analysisData.id);
       
       if (error) throw error;
