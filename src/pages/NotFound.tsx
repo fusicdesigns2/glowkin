@@ -22,21 +22,23 @@ const NotFound = () => {
         <h1 className="text-4xl font-bold mb-4">404</h1>
         <p className="text-xl text-gray-600 mb-6">Page not found</p>
         
-        {isPDFRoute && (
-          <div className="mb-6">
-            <div className="flex justify-center mb-4">
-              <FileText className="h-12 w-12 text-blue-600" />
-            </div>
-            <p className="text-gray-600 mb-4">
-              Looking for our PDF Content Gather feature? You might need to:
-            </p>
-            <ul className="text-left text-gray-600 mb-4 space-y-2 pl-5 list-disc">
-              <li>Log in to access your PDFs</li>
-              <li>Upload a PDF first before viewing analysis</li>
-              <li>Check your URL parameters</li>
-            </ul>
+        {/* Make PDF upload section always visible */}
+        <div className="mb-6">
+          <div className="flex justify-center mb-4">
+            <FileText className="h-12 w-12 text-blue-600" />
           </div>
-        )}
+          <p className="text-gray-600 mb-4">
+            Try our new PDF Content Gather feature to extract content from PDF designs:
+          </p>
+          <div className="flex justify-center mb-4">
+            <Button asChild className="bg-blue-600 hover:bg-blue-700">
+              <Link to="/pdf-upload" className="flex items-center">
+                <Upload className="mr-2 h-4 w-4" />
+                Upload PDF Now
+              </Link>
+            </Button>
+          </div>
+        </div>
         
         <div className="flex flex-col sm:flex-row justify-center gap-3">
           <Button asChild>
