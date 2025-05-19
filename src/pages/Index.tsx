@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import ChatInterface from '@/components/ChatInterface';
@@ -5,7 +6,7 @@ import ThreadList from '@/components/ThreadList';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loading } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
-import { Menu, X, FileText } from 'lucide-react';
+import { Menu, X, FileText, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Index() {
@@ -136,6 +137,7 @@ export default function Index() {
                 <Button 
                   className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                 >
+                  <Upload className="mr-2 h-5 w-5" />
                   Try Content Gather
                 </Button>
               </Link>
@@ -150,10 +152,12 @@ export default function Index() {
             <Link to="/dashboard" className="text-gray-600 hover:text-blue-600 transition-colors">
               Dashboard
             </Link>
-            <Link to="/pdf-upload" className="text-gray-600 hover:text-blue-600 transition-colors">
+            <Link to="/pdf-upload" className="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
+              <Upload className="mr-1 h-4 w-4" />
               Upload PDF
             </Link>
-            <Link to="/pdf-list" className="text-gray-600 hover:text-blue-600 transition-colors">
+            <Link to="/pdf-list" className="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
+              <FileText className="mr-1 h-4 w-4" />
               My PDFs
             </Link>
           </div>

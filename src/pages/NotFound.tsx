@@ -1,7 +1,7 @@
 
 import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
-import { FileText } from "lucide-react";
+import { FileText, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const NotFound = () => {
@@ -43,15 +43,20 @@ const NotFound = () => {
             <Link to="/">Return to Home</Link>
           </Button>
           
+          <Button variant="outline" asChild>
+            <Link to="/pdf-upload" className="flex items-center">
+              <Upload className="mr-2 h-4 w-4" />
+              Upload PDF
+            </Link>
+          </Button>
+          
           {isPDFRoute && (
-            <>
-              <Button variant="outline" asChild>
-                <Link to="/pdf-upload">Upload PDF</Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link to="/pdf-list">View My PDFs</Link>
-              </Button>
-            </>
+            <Button variant="outline" asChild>
+              <Link to="/pdf-list" className="flex items-center">
+                <FileText className="mr-2 h-4 w-4" />
+                View My PDFs
+              </Link>
+            </Button>
           )}
         </div>
       </div>

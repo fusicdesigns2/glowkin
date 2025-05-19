@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Menu, FileText } from 'lucide-react';
+import { Menu, FileText, Upload } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +35,12 @@ export default function Header() {
       <div className="flex items-center space-x-4">
         {user ? (
           <>
+            <Link to="/pdf-upload">
+              <Button variant="outline" className="flex items-center text-white hover:bg-blue-600 border-blue-500">
+                <Upload className="mr-2 h-4 w-4" />
+                Upload PDF
+              </Button>
+            </Link>
             <div className="bg-maiFunFactBg text-maiDarkText px-3 py-1 rounded-full text-sm">
               <span className="font-semibold">{profile?.credits}</span> credits
             </div>
@@ -67,13 +73,16 @@ export default function Header() {
                 <DropdownMenuGroup>
                   <DropdownMenuLabel>Content Gather</DropdownMenuLabel>
                   <DropdownMenuItem asChild>
-                    <Link to="/pdf-upload">
-                      <FileText className="mr-2 h-4 w-4" />
+                    <Link to="/pdf-upload" className="flex items-center">
+                      <Upload className="mr-2 h-4 w-4" />
                       Upload PDF
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/pdf-list">My PDFs</Link>
+                    <Link to="/pdf-list" className="flex items-center">
+                      <FileText className="mr-2 h-4 w-4" />
+                      My PDFs
+                    </Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
@@ -85,6 +94,12 @@ export default function Header() {
           </>
         ) : (
           <div className="flex space-x-2">
+            <Link to="/pdf-upload">
+              <Button variant="outline" className="flex items-center hover:bg-blue-600 border-blue-500 text-white">
+                <Upload className="mr-2 h-4 w-4" />
+                Try PDF Upload
+              </Button>
+            </Link>
             <Button variant="outline" onClick={() => window.location.href = "/login"}>
               Log in
             </Button>
