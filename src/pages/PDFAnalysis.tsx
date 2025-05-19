@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -109,7 +108,7 @@ export default function PDFAnalysis() {
         // Start analysis if it doesn't exist
         await startAnalysis(id);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching PDF data:', error);
       toast({
         title: "Error",
@@ -125,8 +124,8 @@ export default function PDFAnalysis() {
     try {
       setAnalysisStatus('processing');
       
-      // Call edge function to start analysis
-      const response = await fetch('/api/analyze-pdf', {
+      // Fixed: Updated API endpoint to correct format
+      const response = await fetch('/functions/v1/analyze-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pdfId })
@@ -145,7 +144,7 @@ export default function PDFAnalysis() {
       // Start polling for updates
       startPolling(result.analysisId);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error starting analysis:', error);
       setAnalysisStatus('failed');
       toast({

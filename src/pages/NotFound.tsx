@@ -22,13 +22,13 @@ const NotFound = () => {
         <h1 className="text-4xl font-bold mb-4">404</h1>
         <p className="text-xl text-gray-600 mb-6">Page not found</p>
         
-        {/* Make PDF upload section always visible */}
+        {/* Make PDF upload section more prominent */}
         <div className="mb-6">
           <div className="flex justify-center mb-4">
             <FileText className="h-12 w-12 text-blue-600" />
           </div>
           <p className="text-gray-600 mb-4">
-            Try our new PDF Content Gather feature to extract content from PDF designs:
+            Try our PDF Content Gather feature to extract content from PDF designs:
           </p>
           <div className="flex justify-center mb-4">
             <Button asChild className="bg-blue-600 hover:bg-blue-700">
