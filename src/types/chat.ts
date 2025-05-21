@@ -100,3 +100,23 @@ export type JsonValue =
   | null
   | { [key: string]: JsonValue }
   | JsonValue[];
+
+export interface ChatContextType {
+  threads: Thread[];
+  currentThread: Thread | null;
+  isLoading: boolean;
+  createThread: () => void;
+  selectThread: (threadId: string) => void;
+  sendMessage: (content: string, estimatedCost: number, model?: string) => Promise<void>;
+  getMessageCostEstimate: (content: string) => number;
+  funFacts: string[];
+  currentFunFact: string;
+  refreshFunFact: () => void;
+  updateThreadInList: (threadId: string, updates: Partial<Thread>) => void;
+  setSelectedModel: (model: string) => void;
+  hideThread: (threadId: string) => void;
+  unhideThread: (threadId: string) => void;
+  showAllHiddenThreads: () => void;
+  hideAllThreads: () => void;
+  updateThreadSystemPrompt: (threadId: string, systemPrompt: string) => Promise<void>;
+}

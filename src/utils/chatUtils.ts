@@ -56,7 +56,7 @@ export const saveMessage = async (
     if (!keyInfo.processingModel) keyInfo.processingModel = "unknown";
   }
 
-  // Create message object with all fields - convert KeyInfo to a JSON-compatible object
+  // Create message object with all fields - fix type conversion
   const messageObject = {
     thread_id: threadId,
     role,
@@ -68,7 +68,7 @@ export const saveMessage = async (
     credit_cost: creditCost,
     predicted_cost: predictedCost,
     summary,
-    key_info: keyInfo as unknown as JsonValue // Type assertion to handle the conversion
+    key_info: keyInfo as unknown as JsonValue // Properly handle the type conversion
   };
 
   console.log('Saving message with object:', JSON.stringify(messageObject));

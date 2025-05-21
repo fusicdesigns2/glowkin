@@ -47,7 +47,7 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-export function ChatProvider({ children }: { children: React.ReactNode }) {
+export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, profile, updateCredits, isLoading: authLoading } = useAuth();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [currentThread, setCurrentThread] = useState<Thread | null>(null);
