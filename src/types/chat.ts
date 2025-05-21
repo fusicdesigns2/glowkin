@@ -1,4 +1,3 @@
-
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -31,7 +30,7 @@ export interface Thread {
   messages: ChatMessage[];
   lastUpdated: Date;
   hidden?: boolean;
-  contextData?: ContextData[];
+  system_prompt?: string;
 }
 
 export interface ContextData {

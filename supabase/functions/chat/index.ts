@@ -411,6 +411,33 @@ serve(async (req) => {
 
     console.log('Processing chat request with model:', model);
     
+    // Extract system message if present
+    const systemMessage = messages.find(msg => msg.role === 'system');
+    const userMessages = messages.filter(msg => msg.role !== 'system');
+    
+    // Prepare the message array for OpenAI
+    const openAIMessages = [];
+    
+    // Add system message first if present, otherwise use default
+    if (systemMessage) {
+      openAIMessages.push({
+        role: 'system',
+        content: systemMessage.content
+      });
+      console.log('Using custom system prompt:', systemMessage.content.substring(0, 50) + '...');
+    } else {
+      openAIMessages.push({
+        role: 'system',
+        content: 'You are a helpful AI assistant.'
+      });
+    }
+    
+    // Add all other messages
+    openAIMessages.push(...userMessages.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    })));
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -419,13 +446,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: model,
-        messages: [
-          { role: 'system', content: 'You are a helpful AI assistant.' },
-          ...messages.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          }))
-        ],
+        messages: openAIMessages,
         temperature: 0.7,
       }),
     })

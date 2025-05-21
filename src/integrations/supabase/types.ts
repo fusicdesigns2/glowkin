@@ -185,6 +185,7 @@ export type Database = {
           created_at: string | null
           hidden: boolean | null
           id: string
+          system_prompt: string | null
           title: string
           updated_at: string | null
           user_id: string
@@ -194,6 +195,7 @@ export type Database = {
           created_at?: string | null
           hidden?: boolean | null
           id?: string
+          system_prompt?: string | null
           title: string
           updated_at?: string | null
           user_id: string
@@ -203,6 +205,7 @@ export type Database = {
           created_at?: string | null
           hidden?: boolean | null
           id?: string
+          system_prompt?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string

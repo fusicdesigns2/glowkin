@@ -42,6 +42,7 @@ interface ChatContextType {
   unhideThread: (threadId: string) => void;
   showAllHiddenThreads: () => void;
   hideAllThreads: () => void;
+  updateThreadSystemPrompt: (threadId: string, systemPrompt: string) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -254,6 +255,34 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Add updateThreadSystemPrompt function
+  const updateThreadSystemPrompt = async (threadId: string, systemPrompt: string) => {
+    try {
+      // Update in database
+      const { error } = await supabase
+        .from('chat_threads')
+        .update({ system_prompt: systemPrompt })
+        .eq('id', threadId);
+      
+      if (error) throw error;
+      
+      // Update in state
+      setThreads(prevThreads => 
+        prevThreads.map(thread => 
+          thread.id === threadId ? { ...thread, system_prompt: systemPrompt } : thread
+        )
+      );
+      
+      if (currentThread && currentThread.id === threadId) {
+        setCurrentThread({ ...currentThread, system_prompt: systemPrompt });
+      }
+      
+    } catch (error) {
+      console.error('Error updating system prompt:', error);
+      toast.error("Failed to save system prompt");
+    }
+  };
+
   // Modified to handle image generation confirmation
   const sendMessage = async (content: string, estimatedCost: number, model?: string) => {
     if (!user || !profile) {
@@ -356,8 +385,22 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         null // Initially no key info until we get it back from the API
       );
 
+      // Create messages array with system prompt if present
+      const messagesWithSystemPrompt = [...updatedThread.messages];
+      
+      // If the thread has a system prompt, add it to the messages
+      if (updatedThread.system_prompt) {
+        // For OpenAI API, prepend a system message to give instructions
+        messagesWithSystemPrompt.unshift({
+          id: `system_${Date.now()}`,
+          role: 'system',
+          content: updatedThread.system_prompt,
+          timestamp: new Date()
+        });
+      }
+      
       // Use the thread's stored model or the passed model
-      const aiResponse = await sendChatMessage(updatedThread.messages, false, modelToUse);
+      const aiResponse = await sendChatMessage(messagesWithSystemPrompt, false, modelToUse);
       
       if (typeof aiResponse === 'string') {
         toast.error(aiResponse);
@@ -606,7 +649,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     hideThread,
     unhideThread,
     showAllHiddenThreads,
-    hideAllThreads
+    hideAllThreads,
+    updateThreadSystemPrompt
   };
 
   return (

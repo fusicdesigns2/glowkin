@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Thread, ChatMessage, ThreadMessage, ModelCost, KeyInfo, JsonValue } from '@/types/chat';
 
@@ -239,10 +238,12 @@ export const loadThreadsFromDB = async (userId: string): Promise<Thread[]> => {
         input_tokens: msg.input_tokens,
         output_tokens: msg.output_tokens,
         tenXCost: msg["10x_cost"],
-        summary: msg.summary  // Make sure to map the summary field
+        summary: msg.summary,
+        keyInfo: msg.key_info as KeyInfo | undefined
       })),
       lastUpdated: new Date(thread.updated_at),
-      hidden: thread.hidden
+      hidden: thread.hidden,
+      system_prompt: thread.system_prompt
     };
   }));
 

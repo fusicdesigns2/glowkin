@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useActiveModels } from '@/hooks/useActiveModels';
 import { useCostPrediction } from '@/hooks/useCostPrediction';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { InfoIcon, Download, MessageSquareText } from 'lucide-react';
+import { InfoIcon, Download, MessageSquareText, Save } from 'lucide-react';
 import ImageDownload from './ImageDownload';
 import KeyInfoDisplay from './KeyInfoDisplay';
 
@@ -37,6 +36,9 @@ export default function ChatInterface() {
   const [textareaHeight, setTextareaHeight] = useState<string>('100px');
   const { predictedCost, predictionDate } = useCostPrediction(selectedModelState, message);
   const [showKeyInfo, setShowKeyInfo] = useState<Record<string, boolean>>({});
+  
+  // Check if this is a new thread with no messages
+  const isNewThread = currentThread?.messages?.length === 0;
 
   useEffect(() => {
     if (activeModels && activeModels.length > 0 && !selectedModelState) {
@@ -146,6 +148,13 @@ export default function ChatInterface() {
       }
       return <>{props.children}</>;
     }
+  };
+
+  const handleSaveSystemPrompt = () => {
+    if (!message.trim() || !currentThread) return;
+    updateThreadSystemPrompt(currentThread.id, message.trim());
+    toast.success("System prompt saved");
+    setMessage('');
   };
 
   if (!user) {
@@ -304,6 +313,12 @@ export default function ChatInterface() {
             <div className="flex flex-col items-center justify-center h-full text-center text-gray-300">
               <h3 className="text-xl font-semibold mb-2">Welcome to Mai Mai!</h3>
               <p className="mb-4">Ask me anything, and I'll do my best to help.</p>
+              {currentThread?.system_prompt && (
+                <div className="mb-4 p-3 bg-blue-900/30 rounded-lg max-w-xl">
+                  <p className="text-sm text-gray-200 font-medium mb-1">System Prompt:</p>
+                  <p className="text-xs text-gray-300">{currentThread.system_prompt}</p>
+                </div>
+              )}
               <p className="text-sm">You have {profile?.credits} credits available</p>
             </div>
           )}
@@ -348,6 +363,19 @@ export default function ChatInterface() {
             </div>
             
             <div className="flex items-center gap-2">
+              {isNewThread && (
+                <Button
+                  type="button"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={handleSaveSystemPrompt}
+                  disabled={!message.trim()}
+                  title="Save as system prompt for this conversation"
+                >
+                  <Save className="h-4 w-4 mr-1" />
+                  Save Prompt
+                </Button>
+              )}
+              
               <Select
                 value={selectedModelState}
                 onValueChange={handleModelChange}
