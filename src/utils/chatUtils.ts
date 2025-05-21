@@ -402,7 +402,7 @@ export const sendChatMessage = async (messages: ChatMessage[], generateImage: bo
     if (generateImage) {
       return {
         ...response.data,
-        keyInfo: response.data.keyInfo // Include extracted key information
+        keyInfo: response.data.keyInfo as KeyInfo | undefined // Fix the type here
       };
     }
 
@@ -420,7 +420,7 @@ export const sendChatMessage = async (messages: ChatMessage[], generateImage: bo
     const inputTokens = response.data.usage?.prompt_tokens || 0;
     const outputTokens = response.data.usage?.completion_tokens || 0;
     const usedModel = response.data.model || model;
-    const keyInfo = response.data.keyInfo; // Extract key information from the response
+    const keyInfo = response.data.keyInfo as KeyInfo | undefined; // Fix the type here
 
     return {
       content: messageContent,
