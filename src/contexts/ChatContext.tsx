@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Thread, ChatMessage, KeyInfo } from '@/types/chat';
+import { Thread, ChatMessage, KeyInfo, ChatContextType } from '@/types/chat';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -24,26 +24,6 @@ import {
   updateMessageSummary
 } from '@/utils/chatUtils';
 import { isImageRequest, calculateImageCost } from '@/utils/imageUtils';
-
-interface ChatContextType {
-  threads: Thread[];
-  currentThread: Thread | null;
-  isLoading: boolean;
-  createThread: () => void;
-  selectThread: (threadId: string) => void;
-  sendMessage: (content: string, estimatedCost: number, model?: string) => Promise<void>;
-  getMessageCostEstimate: (content: string) => number;
-  funFacts: string[];
-  currentFunFact: string;
-  refreshFunFact: () => void;
-  updateThreadInList: (threadId: string, updates: Partial<Thread>) => void;
-  setSelectedModel: (model: string) => void;
-  hideThread: (threadId: string) => void;
-  unhideThread: (threadId: string) => void;
-  showAllHiddenThreads: () => void;
-  hideAllThreads: () => void;
-  updateThreadSystemPrompt: (threadId: string, systemPrompt: string) => Promise<void>;
-}
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 

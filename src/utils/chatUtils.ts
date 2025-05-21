@@ -172,7 +172,7 @@ export const updateThreadContextData = async (
     // Perform the update with detailed error handling
     const { error: updateError, data: updateData } = await supabase
       .from('chat_threads')
-      .update({ context_data: trimmedContextData })
+      .update({ context_data: trimmedContextData as unknown as JsonValue })
       .eq('id', threadId)
       .select();
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,7 +25,8 @@ export default function ChatInterface() {
     sendMessage, 
     isLoading, 
     getMessageCostEstimate,
-    setSelectedModel 
+    setSelectedModel,
+    updateThreadSystemPrompt
   } = useChat();
   const { user, profile } = useAuth();
   const [message, setMessage] = useState('');
