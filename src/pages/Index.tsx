@@ -161,7 +161,7 @@ export default function Index() {
         )}
       </main>
 
-      {user && (
+     /* {user && (
         <div className="bg-white border-t border-gray-200 py-3 px-6">
           <div className="container mx-auto flex justify-center space-x-6">
             <Link to="/dashboard" className="text-gray-600 hover:text-blue-600 transition-colors">
@@ -177,7 +177,7 @@ export default function Index() {
             </Link>
           </div>
         </div>
-      )}
+      )}*/
 
       <footer className="bg-[#403E43] text-white py-4 px-6 text-center">
         <p>&copy; {new Date().getFullYear()} Mai Mai. All rights reserved.</p>
