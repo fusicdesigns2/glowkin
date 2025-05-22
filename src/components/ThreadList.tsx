@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ProjectList } from './ProjectList';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ThreadSystemPromptDialog } from './ThreadSystemPromptDialog';
 
 export default function ThreadList() {
   const { 
@@ -31,7 +33,8 @@ export default function ThreadList() {
     unhideThread,
     showAllHiddenThreads,
     hideAllThreads,
-    moveThreadToProject
+    moveThreadToProject,
+    updateThreadSystemPrompt
   } = useChat();
   
   const [editableThreadId, setEditableThreadId] = useState<string | null>(null);
@@ -39,6 +42,10 @@ export default function ThreadList() {
   const [showHiddenThreads, setShowHiddenThreads] = useState(false);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
   const [threadToMove, setThreadToMove] = useState<string | null>(null);
+  const [isSystemPromptDialogOpen, setIsSystemPromptDialogOpen] = useState(false);
+  const [threadForSystemPrompt, setThreadForSystemPrompt] = useState<string | null>(null);
+  const [isNewThreadDialogOpen, setIsNewThreadDialogOpen] = useState(false);
+  const [newThreadProjectId, setNewThreadProjectId] = useState<string | undefined>(undefined);
   
   // Filter standalone threads (not connected to any project)
   const standaloneThreads = threads.filter(thread => !thread.project_id && (!thread.hidden || showHiddenThreads));
@@ -90,6 +97,14 @@ export default function ThreadList() {
     setIsMoveDialogOpen(true);
   };
 
+  const openSystemPromptDialog = (threadId: string) => {
+    const thread = threads.find(t => t.id === threadId);
+    if (thread) {
+      setThreadForSystemPrompt(threadId);
+      setIsSystemPromptDialogOpen(true);
+    }
+  };
+
   const handleMoveThread = async (projectId: string) => {
     if (threadToMove) {
       await moveThreadToProject(threadToMove, projectId);
@@ -98,9 +113,31 @@ export default function ThreadList() {
     }
   };
 
+  const handleSaveSystemPrompt = async (systemPrompt: string) => {
+    if (threadForSystemPrompt) {
+      await updateThreadSystemPrompt(threadForSystemPrompt, systemPrompt);
+      setIsSystemPromptDialogOpen(false);
+      setThreadForSystemPrompt(null);
+    }
+  };
+
   const handleCreateThread = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    await createThread();
+    setIsNewThreadDialogOpen(true);
+  };
+
+  const handleCreateThreadInProject = async (projectId: string) => {
+    setNewThreadProjectId(projectId);
+    setIsNewThreadDialogOpen(true);
+  };
+
+  const handleNewThreadWithPrompt = async (systemPrompt: string) => {
+    const thread = await createThread(newThreadProjectId);
+    if (thread && systemPrompt) {
+      await updateThreadSystemPrompt(thread.id, systemPrompt);
+    }
+    setIsNewThreadDialogOpen(false);
+    setNewThreadProjectId(undefined);
   };
 
   useEffect(() => {
@@ -158,7 +195,7 @@ export default function ThreadList() {
       <ScrollArea className="flex-grow">
         <div className="p-2">
           {/* Display projects and their threads */}
-          <ProjectList />
+          <ProjectList onCreateThreadInProject={handleCreateThreadInProject} />
           
           {/* Display standalone threads (not in any project) */}
           <h2 className="text-md font-semibold text-white px-2 py-2 flex justify-between items-center">
@@ -202,6 +239,12 @@ export default function ThreadList() {
                               handleTitleClick(thread);
                             }}>
                               <Edit className="w-4 h-4 mr-2" /> Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              openSystemPromptDialog(thread.id);
+                            }}>
+                              <Edit className="w-4 h-4 mr-2" /> Edit System Prompt
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
@@ -293,6 +336,27 @@ export default function ThreadList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Thread System Prompt Dialog */}
+      <ThreadSystemPromptDialog
+        isOpen={isSystemPromptDialogOpen}
+        onClose={() => setIsSystemPromptDialogOpen(false)}
+        onSave={handleSaveSystemPrompt}
+        initialPrompt={threads.find(t => t.id === threadForSystemPrompt)?.system_prompt || ''}
+      />
+
+      {/* New Thread with System Prompt Dialog */}
+      <ThreadSystemPromptDialog
+        isOpen={isNewThreadDialogOpen}
+        onClose={() => {
+          setIsNewThreadDialogOpen(false);
+          setNewThreadProjectId(undefined);
+        }}
+        onSave={handleNewThreadWithPrompt}
+        initialPrompt=""
+        title="New Thread System Prompt"
+        description="Provide a system prompt for the new thread (optional)"
+      />
     </div>
   );
 }

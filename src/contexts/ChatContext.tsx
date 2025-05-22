@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Thread, ChatMessage, ChatContextType, Project } from '@/types/chat';
 import { ChatContextProviderProps } from './ChatContextTypes';
@@ -88,7 +89,7 @@ export const ChatProvider = ({ children }: ChatContextProviderProps) => {
       }
     };
 
-    const loadProjectsFromDB = async (userId: string): Promise<Project[]> => {
+    const loadProjectsFromDB = async (userId: string) => {
       try {
         const { data: projectsData, error } = await supabase
           .from('projects')
@@ -99,7 +100,7 @@ export const ChatProvider = ({ children }: ChatContextProviderProps) => {
         if (error) throw error;
 
         // Convert data to proper Project type objects
-        const projects: Project[] = projectsData.map(project => ({
+        const loadedProjects: Project[] = projectsData.map(project => ({
           id: project.id,
           name: project.name,
           system_prompt: project.system_prompt,
@@ -109,10 +110,9 @@ export const ChatProvider = ({ children }: ChatContextProviderProps) => {
           updated_at: new Date(project.updated_at)
         }));
 
-        return projects;
+        setProjects(loadedProjects);
       } catch (error) {
         console.error('Error loading projects:', error);
-        return [];
       }
     };
 

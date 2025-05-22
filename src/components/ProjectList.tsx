@@ -20,7 +20,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ProjectDialog } from './ProjectDialog';
 
-export function ProjectList() {
+interface ProjectListProps {
+  onCreateThreadInProject?: (projectId: string) => void;
+}
+
+export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
   const { 
     projects,
     threads,
@@ -28,7 +32,9 @@ export function ProjectList() {
     updateProject,
     hideProject,
     unhideProject,
-    createThreadInProject
+    createThreadInProject,
+    selectThread,
+    currentThread
   } = useChat();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -78,7 +84,11 @@ export function ProjectList() {
   };
 
   const handleCreateThreadInProject = (projectId: string) => {
-    createThreadInProject(projectId);
+    if (onCreateThreadInProject) {
+      onCreateThreadInProject(projectId);
+    } else {
+      createThreadInProject(projectId);
+    }
   };
 
   // Get threads that belong to a specific project

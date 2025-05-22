@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useActiveModels } from '@/hooks/useActiveModels';
 import { useCostPrediction } from '@/hooks/useCostPrediction';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { InfoIcon, Download, MessageSquareText, Save } from 'lucide-react';
+import { InfoIcon, Download, MessageSquareText } from 'lucide-react';
 import { toast } from 'sonner';
 import ImageDownload from './ImageDownload';
 import KeyInfoDisplay from './KeyInfoDisplay';
@@ -25,8 +25,7 @@ export default function ChatInterface() {
     sendMessage, 
     isLoading, 
     getMessageCostEstimate,
-    setSelectedModel,
-    updateThreadSystemPrompt
+    setSelectedModel
   } = useChat();
   const { user, profile } = useAuth();
   const [message, setMessage] = useState('');
@@ -55,12 +54,21 @@ export default function ChatInterface() {
   }, [currentThread?.messages]);
 
   useEffect(() => {
-    if (message.trim()) {
-      const cost = getMessageCostEstimate(message, selectedModelState);
-      setEstimatedCost(cost);
-    } else {
-      setEstimatedCost(0);
-    }
+    const estimateCost = async () => {
+      if (message.trim()) {
+        try {
+          const cost = await getMessageCostEstimate(message, selectedModelState);
+          setEstimatedCost(cost);
+        } catch (error) {
+          console.error("Error estimating cost:", error);
+          setEstimatedCost(0);
+        }
+      } else {
+        setEstimatedCost(0);
+      }
+    };
+
+    estimateCost();
   }, [message, getMessageCostEstimate, selectedModelState]);
 
   useEffect(() => {
@@ -154,13 +162,6 @@ export default function ChatInterface() {
       }
       return <>{props.children}</>;
     }
-  };
-
-  const handleSaveSystemPrompt = () => {
-    if (!message.trim() || !currentThread) return;
-    updateThreadSystemPrompt(currentThread.id, message.trim());
-    toast.success("System prompt saved");
-    setMessage('');
   };
 
   if (!user) {
@@ -369,19 +370,6 @@ export default function ChatInterface() {
             </div>
             
             <div className="flex items-center gap-2">
-              {isNewThread && (
-                <Button
-                  type="button"
-                  className="bg-blue-600 hover:bg-blue-700"
-                  onClick={handleSaveSystemPrompt}
-                  disabled={!message.trim()}
-                  title="Save as system prompt for this conversation"
-                >
-                  <Save className="h-4 w-4 mr-1" />
-                  Save Prompt
-                </Button>
-              )}
-              
               <Select
                 value={selectedModelState}
                 onValueChange={handleModelChange}

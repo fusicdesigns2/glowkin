@@ -1,6 +1,6 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Thread, ChatMessage, KeyInfo } from '@/types/chat';
-import { Json } from '@/integrations/supabase/types';
 
 export const loadThreadsFromDB = async (userId: string): Promise<Thread[]> => {
   const { data: threads, error: threadsError } = await supabase
@@ -84,7 +84,7 @@ export const saveMessage = async (
       '10x_cost': tenXCost,
       predicted_cost: predictedCost,
       summary,
-      key_info: keyInfo as unknown as Json
+      key_info: keyInfo as any
     });
 
   if (error) throw error;
@@ -212,14 +212,14 @@ export const updateThreadContextData = async (threadId: string, contextData: any
   const { error } = await supabase
     .from('chat_threads')
     .update({
-      context_data: trimmedContextData as Json
+      context_data: trimmedContextData as any
     })
     .eq('id', threadId);
   
   if (error) throw error;
 };
 
-export const calculateTokenCosts = (inputWords: number, outputWords: number, model: string): { inputCost: number, outputCost: number, toFixed: (digits: number) => string } => {
+export const calculateTokenCosts = (inputWords: number, outputWords: number, model: string): number => {
   // Default costs (these should be updated with actual costs per model)
   const costs = {
     'gpt-4o': { input: 0.01, output: 0.03 },
@@ -239,11 +239,7 @@ export const calculateTokenCosts = (inputWords: number, outputWords: number, mod
   
   const total = inputCost + outputCost;
   
-  return { 
-    inputCost, 
-    outputCost,
-    toFixed: (digits: number) => total.toFixed(digits)
-  };
+  return total;
 };
 
 export const getActiveModelCost = async (model: string) => {

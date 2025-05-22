@@ -105,3 +105,10 @@ export interface ChatContextType {
   createThreadInProject: (projectId: string) => Promise<void>;
   moveThreadToProject: (threadId: string, projectId: string) => Promise<void>;
 }
+
+export interface ImageRequestData {
+  content: string;
+  estimatedCost: number;
+  threadToUse: Thread | null;
+  userMessage: ChatMessage | null;
+}
