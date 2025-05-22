@@ -177,11 +177,11 @@ export default function Index() {
             </Link>
           </div>
         </div>
-      )}*/}
+      )}
 
       <footer className="bg-[#403E43] text-white py-4 px-6 text-center">
         <p>&copy; {new Date().getFullYear()} Mai Mai. All rights reserved.</p>
-      </footer>
+      </footer>*/}
     </div>
   );
 }
