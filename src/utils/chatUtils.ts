@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Thread, ChatMessage, ThreadMessage, ModelCost, KeyInfo, JsonValue } from '@/types/chat';
 
@@ -68,7 +69,7 @@ export const saveMessage = async (
     credit_cost: creditCost,
     predicted_cost: predictedCost,
     summary,
-    key_info: keyInfo as unknown as JsonValue // Properly handle the type conversion
+    key_info: keyInfo as unknown as JsonValue // Use unknown as an intermediary for safe type conversion
   };
 
   console.log('Saving message with object:', JSON.stringify(messageObject));
