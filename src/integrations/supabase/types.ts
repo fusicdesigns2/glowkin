@@ -185,6 +185,7 @@ export type Database = {
           created_at: string | null
           hidden: boolean | null
           id: string
+          project_id: string | null
           system_prompt: string | null
           title: string
           updated_at: string | null
@@ -195,6 +196,7 @@ export type Database = {
           created_at?: string | null
           hidden?: boolean | null
           id?: string
+          project_id?: string | null
           system_prompt?: string | null
           title: string
           updated_at?: string | null
@@ -205,12 +207,21 @@ export type Database = {
           created_at?: string | null
           hidden?: boolean | null
           id?: string
+          project_id?: string | null
           system_prompt?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chat_threads_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       failed_summaries: {
         Row: {
@@ -432,6 +443,39 @@ export type Database = {
           username?: string | null
           whisper_consent?: boolean | null
           whisper_consent_date?: string | null
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          context_data: Json | null
+          created_at: string
+          hidden: boolean
+          id: string
+          name: string
+          system_prompt: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          context_data?: Json | null
+          created_at?: string
+          hidden?: boolean
+          id?: string
+          name: string
+          system_prompt?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          context_data?: Json | null
+          created_at?: string
+          hidden?: boolean
+          id?: string
+          name?: string
+          system_prompt?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

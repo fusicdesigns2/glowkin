@@ -13,17 +13,29 @@ export const useThreadOperations = (
   currentThread: Thread | null
 ) => {
   // Create a new thread
-  const createNewThread = async () => {
+  const createNewThread = async (projectId?: string) => {
     if (!userId) return null;
     
     try {
       const threadId = await createThread(userId, `New Chat ${threads.length + 1}`);
+      
+      // If projectId is provided, associate thread with project
+      if (projectId) {
+        const { error: updateError } = await supabase
+          .from('chat_threads')
+          .update({ project_id: projectId })
+          .eq('id', threadId);
+          
+        if (updateError) throw updateError;
+      }
+      
       const newThread: Thread = {
         id: threadId,
         title: `New Chat ${threads.length + 1}`,
         messages: [],
         lastUpdated: new Date(),
         hidden: false,
+        project_id: projectId || null
       };
       
       setThreads([newThread, ...threads]);
@@ -195,6 +207,7 @@ export const useThreadOperations = (
         setCurrentThread({ ...currentThread, system_prompt: systemPrompt });
       }
       
+      toast.success("System prompt updated");
     } catch (error) {
       console.error('Error updating system prompt:', error);
       toast.error("Failed to save system prompt");

@@ -1,13 +1,15 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Thread, ChatMessage, ChatContextType } from '@/types/chat';
+import { Thread, ChatMessage, ChatContextType, Project } from '@/types/chat';
 import { ChatContextProviderProps } from './ChatContextTypes';
 import { useAuth } from './AuthContext';
 import { loadThreadsFromDB, getMessageCostEstimate } from '@/utils/chatUtils';
 import { useThreadOperations } from '@/hooks/useThreadOperations';
+import { useProjectOperations } from '@/hooks/useProjectOperations';
 import { useMessageHandling } from '@/hooks/useMessageHandling';
 import { useFunFacts } from '@/hooks/useFunFacts';
 import { calculateImageCost } from '@/utils/imageUtils';
+import { supabase } from '@/integrations/supabase/client';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -28,6 +30,7 @@ export const ChatProvider = ({ children }: ChatContextProviderProps) => {
   
   // State variables
   const [threads, setThreads] = useState<Thread[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [currentThread, setCurrentThread] = useState<Thread | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('');
@@ -42,6 +45,12 @@ export const ChatProvider = ({ children }: ChatContextProviderProps) => {
     setThreads,
     setCurrentThread,
     currentThread
+  );
+
+  const projectOps = useProjectOperations(
+    user?.id,
+    projects,
+    setProjects
   );
   
   const messageHandling = useMessageHandling(
@@ -59,10 +68,11 @@ export const ChatProvider = ({ children }: ChatContextProviderProps) => {
     profile?.credits
   );
   
-  // Load threads on user login
+  // Load threads and projects on user login
   useEffect(() => {
     if (!user) {
       setThreads([]);
+      setProjects([]);
       setCurrentThread(null);
       return;
     }
@@ -79,7 +89,34 @@ export const ChatProvider = ({ children }: ChatContextProviderProps) => {
       }
     };
 
+    const loadProjects = async () => {
+      try {
+        const { data: projectsData, error } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        const loadedProjects: Project[] = projectsData.map(project => ({
+          id: project.id,
+          name: project.name,
+          system_prompt: project.system_prompt,
+          hidden: project.hidden,
+          context_data: project.context_data || [],
+          created_at: new Date(project.created_at),
+          updated_at: new Date(project.updated_at)
+        }));
+        
+        setProjects(loadedProjects);
+      } catch (error) {
+        console.error('Failed to load projects:', error);
+      }
+    };
+
     loadThreads();
+    loadProjects();
   }, [user]);
 
   // Set model for the current thread
@@ -94,12 +131,24 @@ export const ChatProvider = ({ children }: ChatContextProviderProps) => {
     }
   };
 
+  // Create thread in project
+  const createThreadInProject = async (projectId: string) => {
+    return projectOps.createThreadInProject(projectId, threadOps.createNewThread, threadOps.updateThreadInList);
+  };
+
+  // Move thread to project
+  const moveThreadToProject = async (threadId: string, projectId: string) => {
+    return projectOps.moveThreadToProject(threadId, projectId, threadOps.updateThreadInList);
+  };
+
   // Context value
   const value: ChatContextType = {
     threads,
+    projects,
     currentThread,
     isLoading,
     createThread: threadOps.createNewThread,
+    createProject: projectOps.createProject,
     selectThread: threadOps.selectThread,
     sendMessage: messageHandling.sendMessage,
     getMessageCostEstimate,
@@ -107,12 +156,17 @@ export const ChatProvider = ({ children }: ChatContextProviderProps) => {
     currentFunFact,
     refreshFunFact,
     updateThreadInList: threadOps.updateThreadInList,
+    updateProject: projectOps.updateProject,
     setSelectedModel: setSelectedModelForThread,
     hideThread: threadOps.hideThread,
     unhideThread: threadOps.unhideThread,
     showAllHiddenThreads: threadOps.showAllHiddenThreads,
     hideAllThreads: threadOps.hideAllThreads,
-    updateThreadSystemPrompt: threadOps.updateThreadSystemPrompt
+    hideProject: projectOps.hideProject,
+    unhideProject: projectOps.unhideProject,
+    updateThreadSystemPrompt: threadOps.updateThreadSystemPrompt,
+    createThreadInProject,
+    moveThreadToProject
   };
 
   return (

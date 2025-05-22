@@ -1,8 +1,9 @@
 
-import { Thread, ChatMessage, KeyInfo } from '@/types/chat';
+import { Thread, ChatMessage, KeyInfo, Project } from '@/types/chat';
 
 export interface ChatContextState {
   threads: Thread[];
+  projects: Project[];
   currentThread: Thread | null;
   isLoading: boolean;
   funFacts: string[];

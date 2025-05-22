@@ -4,22 +4,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useChat } from '@/contexts/ChatContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Edit, Eye, EyeOff, ListFilter } from 'lucide-react';
+import { Plus, Edit, Eye, EyeOff, ListFilter, MoveRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Thread } from '@/types/chat';
+import { Thread, Project } from '@/types/chat';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { ProjectList } from './ProjectList';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export default function ThreadList() {
   const { 
     threads, 
+    projects,
     currentThread, 
     selectThread, 
     createThread, 
@@ -27,11 +31,18 @@ export default function ThreadList() {
     hideThread,
     unhideThread,
     showAllHiddenThreads,
-    hideAllThreads
+    hideAllThreads,
+    moveThreadToProject
   } = useChat();
+  
   const [editableThreadId, setEditableThreadId] = useState<string | null>(null);
   const [editedTitle, setEditedTitle] = useState('');
   const [showHiddenThreads, setShowHiddenThreads] = useState(false);
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+  const [threadToMove, setThreadToMove] = useState<string | null>(null);
+  
+  // Filter standalone threads (not connected to any project)
+  const standaloneThreads = threads.filter(thread => !thread.project_id && (!thread.hidden || showHiddenThreads));
 
   const updateThreadTitle = async (threadId: string, newTitle: string) => {
     if (!newTitle.trim()) {
@@ -75,7 +86,18 @@ export default function ThreadList() {
     setShowHiddenThreads(checked);
   };
 
-  const visibleThreads = threads.filter(thread => !thread.hidden || showHiddenThreads);
+  const openMoveThreadDialog = (threadId: string) => {
+    setThreadToMove(threadId);
+    setIsMoveDialogOpen(true);
+  };
+
+  const handleMoveThread = async (projectId: string) => {
+    if (threadToMove) {
+      await moveThreadToProject(threadToMove, projectId);
+      setIsMoveDialogOpen(false);
+      setThreadToMove(null);
+    }
+  };
 
   useEffect(() => {
     // Update title when current thread changes
@@ -131,9 +153,16 @@ export default function ThreadList() {
       
       <ScrollArea className="flex-grow">
         <div className="p-2">
-          {visibleThreads.length > 0 ? (
+          {/* Display projects and their threads */}
+          <ProjectList />
+          
+          {/* Display standalone threads (not in any project) */}
+          <h2 className="text-md font-semibold text-white px-2 py-2 flex justify-between items-center">
+            Threads
+          </h2>
+          {standaloneThreads.length > 0 ? (
             <div className="space-y-1">
-              {visibleThreads.map(thread => (
+              {standaloneThreads.map(thread => (
                 <div key={thread.id} className="flex items-center group">
                   {editableThreadId !== thread.id ? (
                     <div className="flex items-center justify-between w-full">
@@ -149,28 +178,43 @@ export default function ThreadList() {
                         <span className="truncate w-32">{thread.title}</span>
                       </Button>
                       <div className="flex space-x-1 opacity-0 group-hover:opacity-100">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTitleClick(thread);
-                          }}
-                          className="p-1 hover:bg-[#FFFFFF]/20 hover:scale-105 rounded-full transition-all duration-200 text-white"
-                          aria-label="Edit thread title"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleThreadVisibility(thread);
-                          }}
-                          className="p-1 hover:bg-[#FFFFFF]/20 hover:scale-105 rounded-full transition-all duration-200 text-white"
-                          aria-label={thread.hidden ? "Unhide thread" : "Hide thread"}
-                        >
-                          {thread.hidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="p-1 hover:bg-[#FFFFFF]/20 hover:scale-105 rounded-full transition-all duration-200 text-white"
+                              aria-label="Thread options"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="1" />
+                                <circle cx="12" cy="5" r="1" />
+                                <circle cx="12" cy="19" r="1" />
+                              </svg>
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              handleTitleClick(thread);
+                            }}>
+                              <Edit className="w-4 h-4 mr-2" /> Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              toggleThreadVisibility(thread);
+                            }}>
+                              {thread.hidden ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
+                              {thread.hidden ? 'Show Thread' : 'Hide Thread'}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              openMoveThreadDialog(thread.id);
+                            }}>
+                              <MoveRight className="w-4 h-4 mr-2" /> Move to Project
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   ) : (
@@ -204,11 +248,47 @@ export default function ThreadList() {
             </div>
           ) : (
             <div className="p-4 text-center text-gray-300 text-sm">
-              No chat threads yet
+              No standalone threads
             </div>
           )}
         </div>
       </ScrollArea>
+      
+      {/* Move Thread Dialog */}
+      <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Move Thread to Project</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-2">
+              {projects.filter(project => !project.hidden).length > 0 ? (
+                projects
+                  .filter(project => !project.hidden)
+                  .map((project) => (
+                    <Button
+                      key={project.id}
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => handleMoveThread(project.id)}
+                    >
+                      {project.name}
+                    </Button>
+                  ))
+              ) : (
+                <p className="text-center text-sm text-muted-foreground">
+                  No projects available. Create a project first.
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setIsMoveDialogOpen(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
