@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Thread, ChatMessage, ThreadMessage, ModelCost, KeyInfo, JsonValue } from '@/types/chat';
 
@@ -68,7 +69,7 @@ export const saveMessage = async (
     credit_cost: creditCost,
     predicted_cost: predictedCost,
     summary,
-    key_info: keyInfo as any // Type casting to 'any' to avoid TS error
+    key_info: keyInfo as unknown as JsonValue // Cast to unknown first, then to JsonValue
   };
 
   console.log('Saving message with object:', JSON.stringify(messageObject));
@@ -172,7 +173,7 @@ export const updateThreadContextData = async (
     // Perform the update with detailed error handling
     const { error: updateError, data: updateData } = await supabase
       .from('chat_threads')
-      .update({ context_data: trimmedContextData as any })
+      .update({ context_data: trimmedContextData as unknown as JsonValue }) // Cast properly
       .eq('id', threadId)
       .select();
 
@@ -402,7 +403,7 @@ export const sendChatMessage = async (messages: ChatMessage[], generateImage: bo
     if (generateImage) {
       return {
         ...response.data,
-        keyInfo: response.data.keyInfo as any // Type casting to avoid TS errors
+        keyInfo: response.data.keyInfo as unknown as KeyInfo | undefined // Fix the type conversion here
       };
     }
 
@@ -420,7 +421,7 @@ export const sendChatMessage = async (messages: ChatMessage[], generateImage: bo
     const inputTokens = response.data.usage?.prompt_tokens || 0;
     const outputTokens = response.data.usage?.completion_tokens || 0;
     const usedModel = response.data.model || model;
-    const keyInfo = response.data.keyInfo as any; // Type casting to avoid TS errors
+    const keyInfo = response.data.keyInfo as unknown as KeyInfo | undefined; // Fix the type conversion here
 
     return {
       content: messageContent,
