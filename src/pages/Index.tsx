@@ -29,8 +29,8 @@ export default function Index() {
     <div className="min-h-screen bg-maiBg flex flex-col">
       <Header />
       
-      {/* Add a prominent upload button banner for all users
-      /* <div className="bg-blue-600 text-white py-2 px-4 flex justify-center items-center">
+      {/* Add a prominent upload button banner for all users */}
+      <div className="bg-blue-600 text-white py-2 px-4 flex justify-center items-center">
         <FileText className="h-5 w-5 mr-2" />
         <span className="mr-3">Try our new PDF Content Gather feature!</span>
         <Link to="/pdf-upload">
@@ -42,7 +42,7 @@ export default function Index() {
             Upload PDF Now
           </Button>
         </Link>
-      </div>  */}
+      </div>
       
       <main className="flex-grow flex">
         {user ? (
