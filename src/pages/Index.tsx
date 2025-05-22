@@ -42,7 +42,7 @@ export default function Index() {
             Upload PDF Now
           </Button>
         </Link>
-      </div>*/
+      </div>*/}
       
       <main className="flex-grow flex">
         {user ? (
