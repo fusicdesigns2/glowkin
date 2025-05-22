@@ -31,7 +31,7 @@ export const useProjectOperations = (
         name: data.name,
         system_prompt: data.system_prompt,
         hidden: data.hidden,
-        context_data: data.context_data || [],
+        context_data: data.context_data ? Array.isArray(data.context_data) ? data.context_data : [] : [],
         created_at: new Date(data.created_at),
         updated_at: new Date(data.updated_at)
       };

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Thread, ChatMessage, ChatContextType, Project } from '@/types/chat';
 import { ChatContextProviderProps } from './ChatContextTypes';
@@ -89,34 +88,36 @@ export const ChatProvider = ({ children }: ChatContextProviderProps) => {
       }
     };
 
-    const loadProjects = async () => {
+    const loadProjectsFromDB = async (userId: string): Promise<Project[]> => {
       try {
         const { data: projectsData, error } = await supabase
           .from('projects')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .order('created_at', { ascending: false });
-        
+
         if (error) throw error;
-        
-        const loadedProjects: Project[] = projectsData.map(project => ({
+
+        // Convert data to proper Project type objects
+        const projects: Project[] = projectsData.map(project => ({
           id: project.id,
           name: project.name,
           system_prompt: project.system_prompt,
           hidden: project.hidden,
-          context_data: project.context_data || [],
+          context_data: Array.isArray(project.context_data) ? project.context_data : [],
           created_at: new Date(project.created_at),
           updated_at: new Date(project.updated_at)
         }));
-        
-        setProjects(loadedProjects);
+
+        return projects;
       } catch (error) {
-        console.error('Failed to load projects:', error);
+        console.error('Error loading projects:', error);
+        return [];
       }
     };
 
     loadThreads();
-    loadProjects();
+    loadProjectsFromDB(user.id);
   }, [user]);
 
   // Set model for the current thread

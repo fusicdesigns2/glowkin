@@ -1,7 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Thread, ChatMessage, KeyInfo } from '@/types/chat';
-import { JsonValue } from '@supabase/supabase-js';
+import { Json } from '@/integrations/supabase/types';
 
 export const loadThreadsFromDB = async (userId: string): Promise<Thread[]> => {
   const { data: threads, error: threadsError } = await supabase
@@ -85,7 +84,7 @@ export const saveMessage = async (
       '10x_cost': tenXCost,
       predicted_cost: predictedCost,
       summary,
-      key_info: keyInfo as unknown as JsonValue
+      key_info: keyInfo as unknown as Json
     });
 
   if (error) throw error;
@@ -177,7 +176,7 @@ export const summarizeMessage = async (content: string, role: 'user' | 'assistan
   }
 };
 
-export const getMessageCostEstimate = async (message: string, model: string): Promise<number> => {
+export const getMessageCostEstimate = async (message: string, model?: string): Promise<number> => {
   try {
     const response = await fetch('/api/estimate-cost', {
       method: 'POST',
@@ -213,14 +212,14 @@ export const updateThreadContextData = async (threadId: string, contextData: any
   const { error } = await supabase
     .from('chat_threads')
     .update({
-      context_data: trimmedContextData as JsonValue
+      context_data: trimmedContextData as Json
     })
     .eq('id', threadId);
   
   if (error) throw error;
 };
 
-export const calculateTokenCosts = (inputWords: number, outputWords: number, model: string): { inputCost: number, outputCost: number } => {
+export const calculateTokenCosts = (inputWords: number, outputWords: number, model: string): { inputCost: number, outputCost: number, toFixed: (digits: number) => string } => {
   // Default costs (these should be updated with actual costs per model)
   const costs = {
     'gpt-4o': { input: 0.01, output: 0.03 },
@@ -238,7 +237,13 @@ export const calculateTokenCosts = (inputWords: number, outputWords: number, mod
   const inputCost = (inputTokens / 1000) * modelCost.input;
   const outputCost = (outputTokens / 1000) * modelCost.output;
   
-  return { inputCost, outputCost };
+  const total = inputCost + outputCost;
+  
+  return { 
+    inputCost, 
+    outputCost,
+    toFixed: (digits: number) => total.toFixed(digits)
+  };
 };
 
 export const getActiveModelCost = async (model: string) => {

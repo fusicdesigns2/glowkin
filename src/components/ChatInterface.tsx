@@ -56,12 +56,12 @@ export default function ChatInterface() {
 
   useEffect(() => {
     if (message.trim()) {
-      const cost = getMessageCostEstimate(message);
+      const cost = getMessageCostEstimate(message, selectedModelState);
       setEstimatedCost(cost);
     } else {
       setEstimatedCost(0);
     }
-  }, [message, getMessageCostEstimate]);
+  }, [message, getMessageCostEstimate, selectedModelState]);
 
   useEffect(() => {
     const fetchModelCosts = async () => {
@@ -72,7 +72,11 @@ export default function ChatInterface() {
         if (msg.role === 'assistant' && msg.model && !costs[msg.model]) {
           const cost = await getActiveModelCost(msg.model);
           if (cost) {
-            costs[msg.model] = cost;
+            costs[msg.model] = {
+              ...cost,
+              date: new Date(cost.date),
+              prediction_date: cost.prediction_date ? new Date(cost.prediction_date) : undefined
+            };
           }
         }
       }
@@ -257,11 +261,11 @@ export default function ChatInterface() {
                             </Badge>
                             {msg.model && modelCosts[msg.model] && (
                               <Badge variant="outline" className="text-xs">
-                                cost: ${(calculateTokenCosts(
+                                cost: ${calculateTokenCosts(
                                   msg.input_tokens || 0,
                                   msg.output_tokens || 0,
-                                  modelCosts[msg.model]
-                                )).toFixed(10)}
+                                  msg.model
+                                ).toFixed(10)}
                               </Badge>
                             )}
                             {msg.summary && (

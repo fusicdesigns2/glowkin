@@ -18,7 +18,8 @@ export const useActiveModels = () => {
       // Convert the date string to Date object to match ModelCost type
       return data.map(model => ({
         ...model,
-        date: new Date(model.date)
+        date: new Date(model.date),
+        prediction_date: model.prediction_date ? new Date(model.prediction_date) : undefined
       })) as ModelCost[];
     }
   });

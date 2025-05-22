@@ -6,11 +6,15 @@ export interface KeyInfo {
   svoTriples: SVOTriple[];
   categories: string[];
   topics: string[];
+  extractionTime?: string;
+  processingModel?: string;
+  error?: string;
 }
 
 export interface Entity {
   text: string;
   type: string;
+  label?: string;
 }
 
 export interface NounChunk {
@@ -62,7 +66,7 @@ export interface ModelCost {
   predicted_avg_in_words?: number;
   predicted_avg_out_words?: number;
   prediction_date?: Date;
-  PerUnit?: string;
+  PerUnit?: string | null;
 }
 
 export interface Project {
@@ -84,7 +88,7 @@ export interface ChatContextType {
   createProject: (name: string, systemPrompt?: string) => Promise<string | null>;
   selectThread: (threadId: string) => Thread | null;
   sendMessage: (content: string, estimatedCost: number, model?: string) => Promise<void>;
-  getMessageCostEstimate: (message: string, model: string) => Promise<number>;
+  getMessageCostEstimate: (message: string, model?: string) => Promise<number>;
   funFacts: string[];
   currentFunFact: string;
   refreshFunFact: () => void;

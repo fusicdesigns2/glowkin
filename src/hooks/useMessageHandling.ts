@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Thread, ChatMessage } from '@/types/chat';
@@ -102,7 +101,7 @@ export const useMessageHandling = (
         // Update the user message with the extracted key information
         const { error: updateError } = await supabase
           .from('chat_messages')
-          .update({ key_info: keyInfo })
+          .update({ key_info: keyInfo as unknown as Json })
           .eq('thread_id', updatedThread.id)
           .eq('role', 'user')
           .order('created_at', { ascending: false })

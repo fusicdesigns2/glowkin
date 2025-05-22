@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { KeyInfo, Entity, NounChunk, KeyVerb, SVOTriple } from '@/types/chat';
 import { Badge } from '@/components/ui/badge';
@@ -51,7 +50,7 @@ const KeyInfoDisplay: React.FC<KeyInfoDisplayProps> = ({ keyInfo }) => {
           <div className="flex flex-wrap gap-1 mt-1">
             {entities.map((entity, index) => (
               <Badge key={index} variant="outline" className="text-[10px]">
-                {entity.text} <span className="text-gray-500 ml-1">({entity.label})</span>
+                {entity.text} <span className="text-gray-500 ml-1">({entity.type || entity.label || 'unknown'})</span>
               </Badge>
             ))}
           </div>

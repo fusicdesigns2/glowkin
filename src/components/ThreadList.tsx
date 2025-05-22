@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -99,6 +98,11 @@ export default function ThreadList() {
     }
   };
 
+  const handleCreateThread = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    await createThread();
+  };
+
   useEffect(() => {
     // Update title when current thread changes
     if (currentThread && currentThread.messages.length > 0) {
@@ -118,7 +122,7 @@ export default function ThreadList() {
       <div className="p-4 border-b border-gray-700">
         <div className="flex flex-col gap-2">
           <Button 
-            onClick={createThread} 
+            onClick={handleCreateThread} 
             className="w-full bg-maiGold hover:bg-maiGold/80 text-white"
           >
             <Plus className="w-4 h-4 mr-2" /> New Chat
