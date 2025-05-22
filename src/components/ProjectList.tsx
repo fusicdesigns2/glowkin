@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
 import { Project } from '@/types/chat';
-import { Button } from '@/components/ui/button';
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -10,221 +10,201 @@ import {
   Edit, 
   Eye, 
   EyeOff, 
-  MoreVertical
+  MoreVertical 
 } from 'lucide-react';
-import { 
+import { ProjectDialog } from './ProjectDialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
-import { ProjectDialog } from './ProjectDialog';
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Input } from './ui/input';
+import { ProjectThread } from './ProjectThread';
 
 interface ProjectListProps {
-  onCreateThreadInProject?: (projectId: string) => void;
+  onCreateThreadInProject: (projectId: string) => void;
 }
 
 export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
   const { 
-    projects,
-    threads,
-    createProject,
+    projects, 
+    threads, 
+    currentThread, 
     updateProject,
     hideProject,
-    unhideProject,
-    createThreadInProject,
-    selectThread,
-    currentThread
+    unhideProject
   } = useChat();
-
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
-
-  // Filter projects to show only non-hidden ones
-  const visibleProjects = projects.filter(project => !project.hidden);
-
-  const toggleProjectExpansion = (projectId: string) => {
+  const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
+  const [editableProject, setEditableProject] = useState<Project | null>(null);
+  const [editableProjectId, setEditableProjectId] = useState<string | null>(null);
+  const [editedProjectName, setEditedProjectName] = useState('');
+  
+  // Expand/collapse project
+  const toggleProjectExpand = (projectId: string) => {
     setExpandedProjects(prev => ({
       ...prev,
       [projectId]: !prev[projectId]
     }));
   };
-
-  const handleCreateProject = () => {
-    setCurrentProject(null);
-    setIsDialogOpen(true);
+  
+  // Open project dialog for editing
+  const openEditProjectDialog = (project: Project) => {
+    setEditableProject(project);
+    setIsProjectDialogOpen(true);
   };
-
-  const handleEditProject = (project: Project) => {
-    setCurrentProject(project);
-    setIsDialogOpen(true);
-  };
-
-  const handleSaveProject = async (name: string, systemPrompt: string) => {
-    if (currentProject) {
-      // Update existing project
-      await updateProject(currentProject.id, { 
-        name, 
-        system_prompt: systemPrompt 
+  
+  // Handle project edit/save
+  const handleProjectSave = (name: string, systemPrompt: string) => {
+    if (editableProject) {
+      updateProject(editableProject.id, {
+        name,
+        system_prompt: systemPrompt
       });
-    } else {
-      // Create new project
-      await createProject(name, systemPrompt);
     }
-    setIsDialogOpen(false);
+    setIsProjectDialogOpen(false);
+    setEditableProject(null);
   };
-
-  const handleToggleProjectVisibility = (project: Project) => {
+  
+  // Handle project name edit
+  const handleProjectNameEdit = (project: Project) => {
+    setEditableProjectId(project.id);
+    setEditedProjectName(project.name);
+  };
+  
+  // Save edited project name
+  const saveProjectName = (projectId: string) => {
+    if (editedProjectName.trim()) {
+      updateProject(projectId, { name: editedProjectName });
+    }
+    setEditableProjectId(null);
+  };
+  
+  // Toggle project visibility
+  const toggleProjectVisibility = (project: Project) => {
     if (project.hidden) {
       unhideProject(project.id);
     } else {
       hideProject(project.id);
     }
   };
-
-  const handleCreateThreadInProject = (projectId: string) => {
-    if (onCreateThreadInProject) {
-      onCreateThreadInProject(projectId);
-    } else {
-      createThreadInProject(projectId);
-    }
-  };
-
-  // Get threads that belong to a specific project
-  const getProjectThreads = (projectId: string) => {
-    return threads.filter(thread => thread.project_id === projectId && !thread.hidden);
-  };
-
+  
+  // Filter visible projects
+  const visibleProjects = projects.filter(project => !project.hidden);
+  
   return (
     <div className="mb-4">
-      <div className="flex items-center justify-between px-2 py-2">
-        <h2 className="text-md font-semibold text-white">Projects</h2>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-7 w-7 p-0 text-gray-300 hover:text-white hover:bg-[#FFFFFF]/10"
-          onClick={handleCreateProject}
-        >
-          <Plus className="h-4 w-4" />
-          <span className="sr-only">New Project</span>
-        </Button>
-      </div>
-
-      <div className="space-y-1 px-1">
-        {visibleProjects.length > 0 ? (
-          visibleProjects.map(project => (
-            <div key={project.id} className="rounded-md hover:bg-[#FFFFFF]/5">
-              <div className="flex items-center justify-between px-2 py-1">
+      {visibleProjects.map((project) => {
+        // Get threads that belong to this project
+        const projectThreads = threads.filter(thread => thread.project_id === project.id && !thread.hidden);
+        
+        return (
+          <div key={project.id} className="mb-2">
+            {editableProjectId !== project.id ? (
+              <div className="flex items-center justify-between group">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 flex items-center justify-start p-0 text-gray-300 hover:text-white hover:bg-transparent"
-                  onClick={() => toggleProjectExpansion(project.id)}
+                  className="flex items-center justify-start p-2 w-full text-white hover:bg-[#FFFFFF]/10"
+                  onClick={() => toggleProjectExpand(project.id)}
                 >
-                  {expandedProjects[project.id] ? (
-                    <ChevronDown className="h-4 w-4 mr-1" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 mr-1" />
-                  )}
-                  <span className="truncate max-w-[150px]">{project.name}</span>
+                  {expandedProjects[project.id] ? 
+                    <ChevronDown className="h-4 w-4 mr-2" /> : 
+                    <ChevronRight className="h-4 w-4 mr-2" />
+                  }
+                  <span className="font-semibold">{project.name}</span>
+                  <span className="text-xs text-gray-400 ml-2">({projectThreads.length})</span>
                 </Button>
                 
-                <div className="flex items-center space-x-1">
-                  <Button
+                <div className="opacity-0 group-hover:opacity-100 flex items-center mr-1">
+                  <Button 
                     variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 text-gray-300 hover:text-white hover:bg-[#FFFFFF]/10"
-                    onClick={() => handleCreateThreadInProject(project.id)}
+                    size="icon"
+                    className="h-6 w-6 p-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCreateThreadInProject(project.id);
+                    }}
                   >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span className="sr-only">New Thread</span>
+                    <Plus className="h-4 w-4" />
                   </Button>
                   
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 text-gray-300 hover:text-white hover:bg-[#FFFFFF]/10"
+                        size="icon"
+                        className="h-6 w-6 p-1"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <MoreVertical className="h-3.5 w-3.5" />
-                        <span className="sr-only">More options</span>
+                        <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40">
-                      <DropdownMenuItem onClick={() => handleEditProject(project)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Project
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => handleProjectNameEdit(project)}>
+                        <Edit className="w-4 h-4 mr-2" /> Rename
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleToggleProjectVisibility(project)}>
-                        {project.hidden ? (
-                          <>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Show Project
-                          </>
-                        ) : (
-                          <>
-                            <EyeOff className="h-4 w-4 mr-2" />
-                            Hide Project
-                          </>
-                        )}
+                      <DropdownMenuItem onClick={() => openEditProjectDialog(project)}>
+                        <Edit className="w-4 h-4 mr-2" /> Edit System Prompt
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => toggleProjectVisibility(project)}>
+                        <EyeOff className="w-4 h-4 mr-2" /> Hide Project
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               </div>
-              
-              {/* Display project threads if expanded */}
-              {expandedProjects[project.id] && (
-                <div className="pl-6 pr-2 mt-1 mb-1 space-y-1">
-                  {getProjectThreads(project.id).map(thread => (
-                    <ThreadListItem key={thread.id} thread={thread} />
-                  ))}
-                  {getProjectThreads(project.id).length === 0 && (
-                    <p className="text-sm text-gray-400 px-2 py-1">No threads in this project</p>
-                  )}
-                </div>
-              )}
-            </div>
-          ))
-        ) : (
-          <p className="text-sm text-gray-400 px-2 py-1">No projects yet</p>
-        )}
-      </div>
-
+            ) : (
+              <div className="flex items-center">
+                <Input
+                  value={editedProjectName}
+                  onChange={(e) => setEditedProjectName(e.target.value)}
+                  onBlur={() => saveProjectName(project.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveProjectName(project.id);
+                    if (e.key === 'Escape') setEditableProjectId(null);
+                  }}
+                  className="text-sm bg-white text-black h-8"
+                  autoFocus
+                />
+              </div>
+            )}
+            
+            {expandedProjects[project.id] && (
+              <div className="pl-6 mt-1 space-y-1">
+                {projectThreads.length > 0 ? (
+                  projectThreads.map(thread => (
+                    <ProjectThread
+                      key={thread.id}
+                      thread={thread}
+                      currentThreadId={currentThread?.id}
+                      onRename={() => {}}
+                      onSystemPromptEdit={(threadId) => {}}
+                      onMoveThread={(threadId) => {}}
+                    />
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-400 py-1">No threads</div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      
       <ProjectDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        onSave={handleSaveProject}
-        project={currentProject}
+        isOpen={isProjectDialogOpen}
+        onClose={() => {
+          setIsProjectDialogOpen(false);
+          setEditableProject(null);
+        }}
+        onSave={handleProjectSave}
+        project={editableProject}
       />
     </div>
-  );
-}
-
-interface ThreadListItemProps {
-  thread: {
-    id: string;
-    title: string;
-  };
-}
-
-function ThreadListItem({ thread }: ThreadListItemProps) {
-  const { selectThread, currentThread } = useChat();
-  
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className={`w-full h-7 justify-start text-left truncate text-sm ${
-        currentThread?.id === thread.id 
-          ? 'bg-[#FFFFFF]/20 font-bold' 
-          : 'hover:bg-[#FFFFFF]/10'
-      }`}
-      onClick={() => selectThread(thread.id)}
-    >
-      <span className="truncate max-w-[130px]">{thread.title}</span>
-    </Button>
   );
 }

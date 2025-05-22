@@ -1,9 +1,17 @@
-
-import { useState, useEffect } from 'react';
-import { Thread, ChatMessage, ImageRequestData } from '@/types/chat';
-import { supabase } from '@/integrations/supabase/client';
-import { sendChatMessage, saveMessage, summarizeMessage } from '@/utils/chatUtils';
+import { useState } from 'react';
+import { Thread, ChatMessage } from '@/types/chat';
+import { v4 as uuidv4 } from 'uuid';
+import { getActiveModelCost, calculateTokenCosts } from '@/utils/chatUtils';
+import { Configuration, OpenAIApi } from "openai";
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { calculateImageCost } from '@/utils/imageUtils';
+
+const configuration = new Configuration({
+  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+});
+
+const openai = new OpenAIApi(configuration);
 
 export const useMessageHandling = (
   threads: Thread[],
@@ -14,265 +22,188 @@ export const useMessageHandling = (
   refreshFunFact: () => void,
   threadModels: Record<string, string>,
   selectedModel: string,
-  createThread: (projectId?: string) => Promise<Thread | null>,
-  updateCredits: (amount: number) => Promise<void>,
+  createNewThread: (projectId?: string) => Promise<Thread | null>,
+  updateCredits: (newCredits: number) => void,
   userId?: string,
-  availableCredits?: number
+  credits?: number
 ) => {
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [imageConfirmOpen, setImageConfirmOpen] = useState(false);
-  const [imageRequestData, setImageRequestData] = useState<ImageRequestData | null>(null);
-  
-  // Detect image generation requests
-  const detectImageRequest = (content: string): boolean => {
-    const imageRequestTerms = [
-      'generate image',
-      'create image',
-      'make image',
-      'draw',
-      'generate a picture',
-      'create a picture',
-      'make a picture',
-      'generate an image',
-      'generate me an image',
-      'create an image for',
-      'imagine'
-    ];
-    
-    // Convert content to lowercase for case-insensitive matching
-    const lowerContent = content.toLowerCase();
-    
-    // Check if any of the image request terms are in the content
-    return imageRequestTerms.some(term => lowerContent.includes(term));
-  };
-  
-  const sendMessage = async (content: string, estimatedCost: number, model?: string) => {
-    if (!userId) return;
-    
-    // Check if the user has enough credits
-    if (availableCredits !== undefined && availableCredits < estimatedCost) {
-      toast.error("Not enough credits to send this message");
-      return;
-    }
-    
-    // Check if this appears to be an image generation request
-    if (detectImageRequest(content)) {
-      // Store the message data to use after confirmation
-      setImageRequestData({
-        content,
-        estimatedCost,
-        threadToUse: currentThread,
-        userMessage: null
-      });
-      
-      // Open confirmation dialog
-      setImageConfirmOpen(true);
-      return;
-    }
+  const [messageToProcess, setMessageToProcess] = useState('');
 
-    // Get thread or create a new one
-    let threadToUse = currentThread;
-    
-    if (!threadToUse) {
-      const newThread = await createThread();
-      if (!newThread) {
-        toast.error("Failed to create a thread");
-        return;
-      }
-      threadToUse = newThread;
-    }
-    
+  const handleImageGeneration = async () => {
+    setImageConfirmOpen(false);
+    await generateImage(messageToProcess);
+    setMessageToProcess('');
+  };
+
+  const handleCancelImageGeneration = () => {
+    setImageConfirmOpen(false);
+    sendMessageToAI(messageToProcess);
+    setMessageToProcess('');
+  };
+
+  const generateImage = async (prompt: string) => {
+    if (!currentThread) return;
+
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      
-      // Add user message to state
-      const timestamp = new Date();
-      const userMessageId = crypto.randomUUID();
-      const userMessage: ChatMessage = {
-        id: userMessageId,
-        role: 'user',
-        content: content,
-        timestamp,
-        input_tokens: 0,
-        output_tokens: 0,
-      };
-      
-      const updatedThread = {
-        ...threadToUse,
-        messages: [...threadToUse.messages, userMessage]
-      };
-      
-      // Update the thread in state
-      setThreads(threads.map(t => 
-        t.id === threadToUse!.id ? updatedThread : t
-      ));
-      setCurrentThread(updatedThread);
-      
-      // Get combined system prompt (project + thread)
-      let systemPrompt = threadToUse.system_prompt || '';
-      if (threadToUse.project_id) {
-        const project = threads
-          .find(thread => thread.id === threadToUse!.id)?.project_id || null;
-        
-        if (project) {
-          const projectData = await supabase
-            .from('projects')
-            .select('system_prompt')
-            .eq('id', project)
-            .single();
-          
-          if (projectData.data && projectData.data.system_prompt) {
-            systemPrompt = projectData.data.system_prompt + 
-              (systemPrompt ? '\n\n' + systemPrompt : '');
-          }
+      const response = await openai.createImage({
+        prompt: prompt,
+        n: 1,
+        size: "1024x1024",
+      });
+
+      const imageUrl = response.data.data[0].url;
+
+      if (imageUrl) {
+        const newMessage: ChatMessage = {
+          id: uuidv4(),
+          role: 'assistant',
+          content: `Here is the image you requested:\n<download-image url="${imageUrl}" prompt="${prompt}"/>`,
+          timestamp: new Date(),
+          model: 'dall-e-3',
+          input_tokens: 0,
+          output_tokens: 0
+        };
+
+        const updatedMessages = [...currentThread.messages, newMessage];
+        const updatedThread: Thread = { ...currentThread, messages: updatedMessages, lastUpdated: new Date() };
+
+        setThreads(threads.map(thread => thread.id === currentThread.id ? updatedThread : thread));
+        setCurrentThread(updatedThread);
+
+        // Deduct credits for image generation
+        if (credits !== undefined) {
+          const newCredits = credits - calculateImageCost;
+          updateCredits(newCredits);
         }
+        toast.success("Image generated successfully!");
+      } else {
+        toast.error("Failed to generate image.");
       }
-      
-      // Prepare messages array for API call
-      const messagesToSend: ChatMessage[] = [];
-      
-      // Add system prompt if exists
-      if (systemPrompt) {
-        messagesToSend.push({
-          id: 'system-prompt',
-          role: 'system',
-          content: systemPrompt,
-          timestamp: new Date()
-        });
-      }
-      
-      // Add context from thread's messages
-      const contextMessages = threadToUse.messages.slice(-10); // Last 10 messages as context
-      messagesToSend.push(...contextMessages);
-      
-      // Add the new user message
-      messagesToSend.push(userMessage);
-      
-      // Use the selected model for this thread, or default to the global selected model
-      const modelToUse = threadModels[threadToUse.id] || model || selectedModel;
-      
-      // Send the message to the API
-      const response = await sendChatMessage(messagesToSend, false, modelToUse);
-      
-      if (typeof response === 'string') {
-        // Error response
-        toast.error(response);
-        return;
-      }
-      
-      // Create assistant message
-      const assistantMessageId = crypto.randomUUID();
-      const assistantMessage: ChatMessage = {
-        id: assistantMessageId,
-        role: 'assistant',
-        content: response.content,
-        timestamp: new Date(),
-        model: response.model,
-        input_tokens: response.input_tokens,
-        output_tokens: response.output_tokens,
-        keyInfo: response.keyInfo
-      };
-      
-      // Generate a summary for the user message
-      const userSummary = await summarizeMessage(content, 'user');
-      
-      // Generate a summary for the assistant message
-      const assistantSummary = await summarizeMessage(response.content, 'assistant');
-      
-      // Update the user message with the summary
-      const updatedUserMessage = {
-        ...userMessage,
-        summary: userSummary,
-        keyInfo: response.keyInfo
-      };
-      
-      // Update the assistant message with the summary
-      const updatedAssistantMessage = {
-        ...assistantMessage,
-        summary: assistantSummary
-      };
-      
-      // Save messages to database
-      try {
-        // Save user message
-        await saveMessage(
-          threadToUse.id,
-          'user',
-          content,
-          modelToUse,
-          0,
-          0,
-          0,
-          estimatedCost,
-          userSummary,
-          response.keyInfo
-        );
-        
-        // Save assistant message
-        await saveMessage(
-          threadToUse.id,
-          'assistant',
-          response.content,
-          modelToUse,
-          response.input_tokens,
-          response.output_tokens,
-          0,
-          0,
-          assistantSummary,
-          null
-        );
-      } catch (error) {
-        console.error('Error saving messages to database:', error);
-      }
-      
-      // Update thread in state with both messages
-      const finalMessages = threadToUse.messages.map(msg => 
-        msg.id === userMessageId ? updatedUserMessage : msg
-      );
-      
-      const finalThread = {
-        ...threadToUse,
-        messages: [...finalMessages, updatedAssistantMessage],
-        lastUpdated: new Date()
-      };
-      
-      setThreads(threads.map(t => 
-        t.id === threadToUse!.id ? finalThread : t
-      ));
-      setCurrentThread(finalThread);
-      
-      // Deduct credits
-      await updateCredits(-estimatedCost);
-      
-      // Refresh the fun fact
-      refreshFunFact();
-      
-    } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error("Failed to send message");
+    } catch (error: any) {
+      console.error("Error generating image:", error);
+      toast.error(`Failed to generate image: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
-  
-  const handleImageGeneration = async () => {
-    if (!imageRequestData) return;
+
+  const sendMessageToAI = async (content: string) => {
+    if (!userId) return;
+    if (!currentThread) return;
+
+    setIsLoading(true);
+    refreshFunFact();
+
+    const threadSystemPrompt = currentThread.system_prompt || '';
+    const model = threadModels[currentThread.id] || selectedModel;
+
+    // Check if the thread belongs to a project and combine system prompts if needed
+    const handleSystemPrompt = async () => {
+      let finalSystemPrompt = threadSystemPrompt;
+      
+      if (currentThread.project_id) {
+        // Fetch the project to get its system prompt
+        try {
+          const { data: projectData } = await supabase
+            .from('projects')
+            .select('system_prompt')
+            .eq('id', currentThread.project_id)
+            .single();
+          
+          if (projectData && projectData.system_prompt) {
+            // Combine project and thread system prompts if both exist
+            if (threadSystemPrompt) {
+              finalSystemPrompt = `${projectData.system_prompt}\n\n${threadSystemPrompt}`;
+            } else {
+              finalSystemPrompt = projectData.system_prompt;
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching project system prompt:", error);
+        }
+      }
+      
+      return finalSystemPrompt;
+    };
     
-    // Set imageConfirmOpen to false as we're handling the request now
-    setImageConfirmOpen(false);
-    
-    // Show error dialog
-    setErrorDialogOpen(true);
+    const combinedSystemPrompt = await handleSystemPrompt();
+
+    try {
+      const completion = await openai.createChatCompletion({
+        model: model,
+        messages: [
+          {
+            role: "system",
+            content: combinedSystemPrompt || "You are a helpful assistant.",
+          },
+          ...currentThread.messages.map(m => ({ role: m.role, content: m.content })),
+          { role: "user", content: content },
+        ],
+        // max_tokens: 50,
+      });
+
+      if (completion.data.choices && completion.data.choices.length > 0) {
+        const aiMessage = completion.data.choices[0].message?.content;
+        const inputTokens = completion.data.usage?.prompt_tokens || 0;
+        const outputTokens = completion.data.usage?.completion_tokens || 0;
+
+        if (aiMessage) {
+          const newMessage: ChatMessage = {
+            id: uuidv4(),
+            role: 'assistant',
+            content: aiMessage,
+            timestamp: new Date(),
+            model: model,
+            input_tokens: inputTokens,
+            output_tokens: outputTokens
+          };
+
+          const updatedMessages = [...currentThread.messages, newMessage];
+          const updatedThread: Thread = { ...currentThread, messages: updatedMessages, lastUpdated: new Date() };
+
+          setThreads(threads.map(thread => thread.id === currentThread.id ? updatedThread : thread));
+          setCurrentThread(updatedThread);
+
+          // Deduct credits based on token usage
+          const tokenCost = calculateTokenCosts(inputTokens, outputTokens, model);
+          if (credits !== undefined) {
+            const newCredits = credits - tokenCost;
+            updateCredits(newCredits);
+          }
+        }
+      } else {
+        toast.error("No response from AI.");
+      }
+    } catch (error: any) {
+      console.error("Error sending message:", error);
+      toast.error(`Failed to send message: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
-  
-  const handleCancelImageGeneration = async () => {
-    // User chose to just get a text response
-    setImageConfirmOpen(false);
-    
-    if (!imageRequestData) return;
-    await sendMessage(imageRequestData.content, imageRequestData.estimatedCost);
+
+  const sendMessage = async (content: string, estimatedCost: number, model: string) => {
+    if (!userId) return;
+    if (!currentThread) return;
+    if (credits === undefined || credits < estimatedCost) {
+      toast.error("Insufficient credits.");
+      return;
+    }
+
+    const lowerCaseContent = content.toLowerCase();
+    const imageKeywords = ['image', 'draw', 'picture', 'generate', 'create', 'dall-e', 'dalle'];
+
+    if (imageKeywords.some(keyword => lowerCaseContent.includes(keyword))) {
+      setMessageToProcess(content);
+      setImageConfirmOpen(true);
+    } else {
+      sendMessageToAI(content);
+    }
   };
-  
+
   return {
     sendMessage,
     errorDialogOpen,

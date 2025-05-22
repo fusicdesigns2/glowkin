@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import ChatInterface from '@/components/ChatInterface';
@@ -30,7 +29,7 @@ export default function Index() {
       <Header />
       
       {/* Add a prominent upload button banner for all users */}
-      {/*<div className="bg-blue-600 text-white py-2 px-4 flex justify-center items-center">
+      <div className="bg-blue-600 text-white py-2 px-4 flex justify-center items-center">
         <FileText className="h-5 w-5 mr-2" />
         <span className="mr-3">Try our new PDF Content Gather feature!</span>
         <Link to="/pdf-upload">
@@ -42,7 +41,7 @@ export default function Index() {
             Upload PDF Now
           </Button>
         </Link>
-      </div>*/}
+      </div>
       
       <main className="flex-grow flex">
         {user ? (
@@ -161,27 +160,10 @@ export default function Index() {
         )}
       </main>
 
-      {/*{user && (
-        <div className="bg-white border-t border-gray-200 py-3 px-6">
-          <div className="container mx-auto flex justify-center space-x-6">
-            <Link to="/dashboard" className="text-gray-600 hover:text-blue-600 transition-colors">
-              Dashboard
-            </Link>
-            <Link to="/pdf-upload" className="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
-              <Upload className="mr-1 h-4 w-4" />
-              Upload PDF
-            </Link>
-            <Link to="/pdf-list" className="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
-              <FileText className="mr-1 h-4 w-4" />
-              My PDFs
-            </Link>
-          </div>
-        </div>
-      )}
-
-      <footer className="bg-[#403E43] text-white py-4 px-6 text-center">
-        <p>&copy; {new Date().getFullYear()} Mai Mai. All rights reserved.</p>
-      </footer>*/}
+      {/* Much smaller footer */}
+      <footer className="bg-[#403E43] text-white py-0.5 px-2 text-center text-xs">
+        <p>&copy; {new Date().getFullYear()} Mai Mai</p>
+      </footer>
     </div>
   );
 }
