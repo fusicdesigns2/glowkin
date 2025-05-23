@@ -7,36 +7,29 @@ import { Loading } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { Menu, X, FileText, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
 export default function Index() {
-  const { user, isLoading } = useAuth();
+  const {
+    user,
+    isLoading
+  } = useAuth();
   const [isPanelOpen, setIsPanelOpen] = useState(true);
-
   const togglePanel = () => {
     setIsPanelOpen(!isPanelOpen);
   };
-
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-maiBg flex items-center justify-center">
+    return <div className="min-h-screen bg-maiBg flex items-center justify-center">
         <Loading size="lg" text="Loading application..." />
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-maiBg flex flex-col">
+  return <div className="min-h-screen bg-maiBg flex flex-col">
       <Header />
       
       {/* Add a prominent upload button banner for all users */}
       <div className="bg-blue-600 text-white py-2 px-4 flex justify-center items-center">
         <FileText className="h-5 w-5 mr-2" />
-        <span className="mr-3">Try our new PDF Content Gather feature!</span>
+        <span className="mr-3">]Ω</span>
         <Link to="/pdf-upload">
-          <Button 
-            variant="outline" 
-            className="border-white text-white hover:bg-blue-700"
-          >
+          <Button variant="outline" className="border-white text-white hover:bg-blue-700">
             <Upload className="mr-2 h-4 w-4" />
             Upload PDF Now
           </Button>
@@ -44,27 +37,17 @@ export default function Index() {
       </div>
       
       <main className="flex-grow flex">
-        {user ? (
-          <div className="flex w-full h-[80vh] relative bg-[#403E43]">
-            {isPanelOpen && 
-              <div className="bg-[#403E43] h-full">
+        {user ? <div className="flex w-full h-[80vh] relative bg-[#403E43]">
+            {isPanelOpen && <div className="bg-[#403E43] h-full">
                 <ThreadList />
-              </div>
-            }
-            <Button 
-              onClick={togglePanel} 
-              variant="ghost" 
-              size="icon" 
-              className="absolute top-2 left-2 z-50 bg-[#403E43] text-white hover:bg-[#403E43]/80"
-            >
+              </div>}
+            <Button onClick={togglePanel} variant="ghost" size="icon" className="absolute top-2 left-2 z-50 bg-[#403E43] text-white hover:bg-[#403E43]/80">
               {isPanelOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
             <div className={`flex-grow transition-all duration-300 flex flex-col`}>
               <ChatInterface />
             </div>
-          </div>
-        ) : (
-          <div className="max-w-4xl mx-auto p-8">
+          </div> : <div className="max-w-4xl mx-auto p-8">
             <div className="text-center mb-12">
               <h1 className="text-4xl font-bold mb-4 text-maiRed">Welcome to Mai Mai</h1>
               <p className="text-xl text-gray-600 mb-8">
@@ -72,16 +55,10 @@ export default function Index() {
               </p>
               
               <div className="flex justify-center space-x-4">
-                <Button 
-                  onClick={() => window.location.href = "/register"} 
-                  className="px-6 py-3 bg-maiRed text-white font-semibold rounded-lg hover:bg-red-600 transition-colors"
-                >
+                <Button onClick={() => window.location.href = "/register"} className="px-6 py-3 bg-maiRed text-white font-semibold rounded-lg hover:bg-red-600 transition-colors">
                   Get Started
                 </Button>
-                <Button 
-                  onClick={() => window.location.href = "/login"} 
-                  className="px-6 py-3 bg-white text-maiDarkText border border-gray-300 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
-                >
+                <Button onClick={() => window.location.href = "/login"} className="px-6 py-3 bg-white text-maiDarkText border border-gray-300 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
                   Log In
                 </Button>
               </div>
@@ -131,10 +108,7 @@ export default function Index() {
                 Try Mai Mai risk-free with 5 complimentary credits. Experience the power of AI without
                 committing to an expensive subscription.
               </p>
-              <Button 
-                onClick={() => window.location.href = "/register"}
-                className="px-6 py-3 bg-maiRed text-white font-semibold rounded-lg hover:bg-red-600 transition-colors"
-              >
+              <Button onClick={() => window.location.href = "/register"} className="px-6 py-3 bg-maiRed text-white font-semibold rounded-lg hover:bg-red-600 transition-colors">
                 Create Your Account
               </Button>
             </div>
@@ -148,22 +122,18 @@ export default function Index() {
                 Upload your PDF designs for AI-powered content analysis. Extract content requirements easily and share with stakeholders.
               </p>
               <Link to="/pdf-upload">
-                <Button 
-                  className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-                >
+                <Button className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
                   <Upload className="mr-2 h-5 w-5" />
                   Try Content Gather
                 </Button>
               </Link>
             </div>
-          </div>
-        )}
+          </div>}
       </main>
 
       {/* Much smaller footer */}
       <footer className="bg-[#403E43] text-white py-0.5 px-2 text-center text-xs">
         <p>&copy; {new Date().getFullYear()} Mai Mai</p>
       </footer>
-    </div>
-  );
+    </div>;
 }
