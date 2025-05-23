@@ -104,26 +104,26 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
         return (
           <div key={project.id} className="mb-2">
             {editableProjectId !== project.id ? (
-              <div className="flex items-center justify-between group">
+              <div className="flex items-center justify-between group px-1">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex items-center justify-start p-2 flex-grow text-white hover:bg-[#FFFFFF]/10"
+                  className="flex items-center p-2 text-white hover:bg-[#FFFFFF]/10 flex-1"
                   onClick={() => toggleProjectExpand(project.id)}
                 >
                   {expandedProjects[project.id] ? 
                     <ChevronDown className="h-4 w-4 min-w-4 mr-2" /> : 
                     <ChevronRight className="h-4 w-4 min-w-4 mr-2" />
                   }
-                  <span className="font-semibold truncate max-w-[130px]">{project.name}</span>
-                  <span className="text-xs text-gray-400 ml-2 whitespace-nowrap">({projectThreads.length})</span>
+                  <span className="font-semibold truncate max-w-[120px] text-left">{project.name}</span>
+                  <span className="text-xs text-gray-400 ml-1 whitespace-nowrap">({projectThreads.length})</span>
                 </Button>
                 
-                <div className="flex items-center mr-1">
+                <div className="flex items-center">
                   <Button 
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 p-1"
+                    className="h-6 w-6 p-1 opacity-0 group-hover:opacity-100"
                     onClick={(e) => {
                       e.stopPropagation();
                       onCreateThreadInProject(project.id);
@@ -137,7 +137,7 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 p-1"
+                        className="h-6 w-6 p-1 opacity-0 group-hover:opacity-100"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <MoreVertical className="h-4 w-4" />
@@ -159,7 +159,7 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center">
+              <div className="flex items-center px-1">
                 <Input
                   value={editedProjectName}
                   onChange={(e) => setEditedProjectName(e.target.value)}

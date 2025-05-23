@@ -18,6 +18,7 @@ import { InfoIcon, Download, MessageSquareText } from 'lucide-react';
 import { toast } from 'sonner';
 import ImageDownload from './ImageDownload';
 import KeyInfoDisplay from './KeyInfoDisplay';
+import ProjectThreadSystemPrompt from './ProjectThreadSystemPrompt';
 
 export default function ChatInterface() {
   const { 
@@ -323,7 +324,13 @@ export default function ChatInterface() {
               {currentThread?.system_prompt && (
                 <div className="mb-4 p-3 bg-blue-900/30 rounded-lg max-w-xl">
                   <p className="text-sm text-gray-200 font-medium mb-1">System Prompt:</p>
-                  <p className="text-xs text-gray-300">{currentThread.system_prompt}</p>
+                  {currentThread.project_id ? (
+                    <div className="space-y-2">
+                      <ProjectThreadSystemPrompt threadId={currentThread.id} />
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-300">{currentThread.system_prompt}</p>
+                  )}
                 </div>
               )}
               <p className="text-sm">You have {profile?.credits} credits available</p>

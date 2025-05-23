@@ -36,11 +36,13 @@ export function ThreadSystemPromptDialog({
   
   // When the dialog opens, set the initial value
   useEffect(() => {
-    if (isOpen) {
-      setSystemPrompt(initialPrompt || '');
-      
-      // Fetch project system prompt if the thread is part of a project
-      const fetchProjectSystemPrompt = async () => {
+    let isMounted = true;
+    
+    const fetchData = async () => {
+      if (isOpen) {
+        if (isMounted) setSystemPrompt(initialPrompt || '');
+        
+        // Fetch project system prompt if the thread is part of a project
         if (currentThread?.project_id) {
           try {
             const { data, error } = await supabase
@@ -51,42 +53,43 @@ export function ThreadSystemPromptDialog({
               
             if (error) throw error;
             
-            if (data && data.system_prompt) {
+            if (data && data.system_prompt && isMounted) {
               setProjectSystemPrompt(data.system_prompt);
-            } else {
+            } else if (isMounted) {
               setProjectSystemPrompt('');
             }
           } catch (err) {
             console.error('Error fetching project system prompt:', err);
-            setProjectSystemPrompt('');
+            if (isMounted) setProjectSystemPrompt('');
           }
-        } else {
+        } else if (isMounted) {
           setProjectSystemPrompt('');
         }
-      };
-      
-      fetchProjectSystemPrompt();
-    }
+      }
+    };
+    
+    fetchData();
+    
+    // Cleanup function to prevent state updates after unmounting
+    return () => {
+      isMounted = false;
+    };
   }, [isOpen, initialPrompt, currentThread]);
   
   const handleSave = () => {
-    try {
-      onSave(systemPrompt.trim());
-    } catch (error) {
-      console.error("Error saving system prompt:", error);
-    }
+    onSave(systemPrompt.trim());
   };
 
+  // Reset state when dialog closes to prevent memory leaks
   const handleClose = () => {
-    try {
-      onClose();
-      // Reset state to prevent memory leaks and state conflicts
-      setSystemPrompt('');
-      setProjectSystemPrompt('');
-    } catch (error) {
-      console.error("Error closing dialog:", error);
-    }
+    onClose();
+    // We're going to reset the state immediately to prevent memory leaks
+    setSystemPrompt('');
+    setProjectSystemPrompt('');
   };
+  
+  // When dialog is open, set the initial values
+  if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -119,16 +122,18 @@ export function ThreadSystemPromptDialog({
             </div>
           )}
           
-          <p className="text-xs text-gray-400 mt-2">
-            System prompts help define the AI's behavior, knowledge, and tone.
-          </p>
+          <div className="text-xs text-gray-400 mt-2">
+            {projectSystemPrompt 
+              ? "When this thread is used, both prompts will be sent to the AI in this order: project prompt first, then thread prompt."
+              : "System prompts help define the AI's behavior, knowledge, and tone."}
+          </div>
         </div>
         
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} className="bg-gray-700">
+        <DialogFooter className="sm:justify-end">
+          <Button variant="outline" onClick={handleClose} className="bg-gray-700 h-9">
             Cancel
           </Button>
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} className="h-9">
             Save
           </Button>
         </DialogFooter>

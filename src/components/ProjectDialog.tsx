@@ -26,12 +26,14 @@ export function ProjectDialog({ isOpen, onClose, onSave, project }: ProjectDialo
   
   // When a project is provided for editing, populate the fields
   useEffect(() => {
-    if (project) {
-      setName(project.name);
-      setSystemPrompt(project.system_prompt || '');
-    } else {
-      setName('');
-      setSystemPrompt('');
+    if (isOpen) {
+      if (project) {
+        setName(project.name);
+        setSystemPrompt(project.system_prompt || '');
+      } else {
+        setName('');
+        setSystemPrompt('');
+      }
     }
   }, [project, isOpen]);
   
@@ -41,8 +43,17 @@ export function ProjectDialog({ isOpen, onClose, onSave, project }: ProjectDialo
     }
   };
   
+  // Ensure proper cleanup when dialog closes
+  const handleClose = () => {
+    onClose();
+    // We don't immediately reset the state to prevent UI flickering
+    // State will be reset on the next open via useEffect
+  };
+  
+  if (!isOpen) return null;
+  
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
@@ -79,11 +90,11 @@ export function ProjectDialog({ isOpen, onClose, onSave, project }: ProjectDialo
           </div>
         </div>
         
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="sm:justify-end">
+          <Button variant="outline" onClick={handleClose} className="h-9">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!name.trim()}>
+          <Button onClick={handleSave} disabled={!name.trim()} className="h-9">
             {project ? 'Update' : 'Create'}
           </Button>
         </DialogFooter>
