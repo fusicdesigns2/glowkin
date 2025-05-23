@@ -1,42 +1,28 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Menu, FileText, Upload } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuGroup,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Link } from 'react-router-dom';
-
 export default function Header() {
-  const { user, profile, signOut } = useAuth();
-  
-  return (
-    <header className="w-full py-4 px-6 bg-[#403E43] text-white border-b border-gray-200 flex justify-between items-center">
+  const {
+    user,
+    profile,
+    signOut
+  } = useAuth();
+  return <header className="w-full py-4 px-6 bg-[#403E43] text-white border-b border-gray-200 flex justify-between items-center">
       <div className="flex items-center gap-2">
-        <Button 
-          variant="ghost" 
-          size="icon"
-          className="text-white"
-          onClick={() => document.documentElement.classList.toggle('hide-sidebar')}
-        >
+        <Button variant="ghost" size="icon" className="text-white" onClick={() => document.documentElement.classList.toggle('hide-sidebar')}>
           <Menu className="h-6 w-6" />
         </Button>
         <h1 className="text-2xl font-bold text-white">Mai Mai</h1>
       </div>
       
       <div className="flex items-center space-x-4">
-        {user ? (
-          <>
+        {user ? <>
             <Link to="/pdf-upload">
-              <Button variant="outline" className="flex items-center text-white hover:bg-blue-600 border-blue-500">
+              <Button variant="outline" className="flex items-center hover:bg-blue-600 border-blue-500 text-gray-950">
                 <Upload className="mr-2 h-4 w-4" />
                 Upload PDF
               </Button>
@@ -91,9 +77,7 @@ export default function Header() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </>
-        ) : (
-          <div className="flex space-x-2">
+          </> : <div className="flex space-x-2">
             <Link to="/pdf-upload">
               <Button variant="outline" className="flex items-center hover:bg-blue-600 border-blue-500 text-white">
                 <Upload className="mr-2 h-4 w-4" />
@@ -106,9 +90,7 @@ export default function Header() {
             <Button className="bg-maiRed hover:bg-red-600" onClick={() => window.location.href = "/register"}>
               Sign up
             </Button>
-          </div>
-        )}
+          </div>}
       </div>
-    </header>
-  );
+    </header>;
 }
