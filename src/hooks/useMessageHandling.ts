@@ -1,17 +1,11 @@
+
 import { useState } from 'react';
 import { Thread, ChatMessage } from '@/types/chat';
 import { v4 as uuidv4 } from 'uuid';
 import { getActiveModelCost, calculateTokenCosts } from '@/utils/chatUtils';
-import { Configuration, OpenAIApi } from "openai";
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateImageCost } from '@/utils/imageUtils';
-
-const configuration = new Configuration({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-});
-
-const openai = new OpenAIApi(configuration);
 
 export const useMessageHandling = (
   threads: Thread[],
@@ -48,13 +42,22 @@ export const useMessageHandling = (
 
     setIsLoading(true);
     try {
-      const response = await openai.createImage({
-        prompt: prompt,
-        n: 1,
-        size: "1024x1024",
+      // Use native fetch instead of OpenAI SDK
+      const response = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          n: 1,
+          size: "1024x1024",
+        })
       });
 
-      const imageUrl = response.data.data[0].url;
+      const data = await response.json();
+      const imageUrl = data.data?.[0]?.url;
 
       if (imageUrl) {
         const newMessage: ChatMessage = {
@@ -75,7 +78,9 @@ export const useMessageHandling = (
 
         // Deduct credits for image generation
         if (credits !== undefined) {
-          const newCredits = credits - calculateImageCost;
+          // Use await to get the actual cost value from the async function
+          const imageCost = await calculateImageCost();
+          const newCredits = credits - imageCost;
           updateCredits(newCredits);
         }
         toast.success("Image generated successfully!");
@@ -132,23 +137,35 @@ export const useMessageHandling = (
     const combinedSystemPrompt = await handleSystemPrompt();
 
     try {
-      const completion = await openai.createChatCompletion({
-        model: model,
-        messages: [
-          {
-            role: "system",
-            content: combinedSystemPrompt || "You are a helpful assistant.",
-          },
-          ...currentThread.messages.map(m => ({ role: m.role, content: m.content })),
-          { role: "user", content: content },
-        ],
-        // max_tokens: 50,
+      // Use native fetch instead of OpenAI SDK
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            {
+              role: "system",
+              content: combinedSystemPrompt || "You are a helpful assistant."
+            },
+            ...currentThread.messages.map(m => ({ 
+              role: m.role, 
+              content: m.content 
+            })),
+            { role: "user", content: content }
+          ]
+        })
       });
 
-      if (completion.data.choices && completion.data.choices.length > 0) {
-        const aiMessage = completion.data.choices[0].message?.content;
-        const inputTokens = completion.data.usage?.prompt_tokens || 0;
-        const outputTokens = completion.data.usage?.completion_tokens || 0;
+      const completion = await response.json();
+
+      if (completion.choices && completion.choices.length > 0) {
+        const aiMessage = completion.choices[0].message?.content;
+        const inputTokens = completion.usage?.prompt_tokens || 0;
+        const outputTokens = completion.usage?.completion_tokens || 0;
 
         if (aiMessage) {
           const newMessage: ChatMessage = {
