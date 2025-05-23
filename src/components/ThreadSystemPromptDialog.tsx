@@ -34,7 +34,7 @@ export function ThreadSystemPromptDialog({
   const [projectSystemPrompt, setProjectSystemPrompt] = useState('');
   const { currentThread } = useChat();
   
-  // When the dialog opens, set the initial value
+  // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
       setSystemPrompt(initialPrompt || '');
@@ -73,19 +73,15 @@ export function ThreadSystemPromptDialog({
     onSave(systemPrompt.trim());
   };
 
-  // Reset state when dialog closes to prevent memory leaks
-  const handleClose = () => {
-    // First call the parent's onClose
-    onClose();
-    // Reset state after a small delay to prevent UI flicker
-    setTimeout(() => {
-      setSystemPrompt('');
-      setProjectSystemPrompt('');
-    }, 100);
-  };
-
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-[600px] bg-gray-800 text-white">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -123,10 +119,17 @@ export function ThreadSystemPromptDialog({
         </div>
         
         <DialogFooter className="sm:justify-end">
-          <Button variant="outline" onClick={handleClose} className="bg-gray-700 h-9">
+          <Button 
+            variant="outline" 
+            onClick={onClose} 
+            className="bg-gray-700 h-9"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSave} className="h-9">
+          <Button 
+            onClick={handleSave} 
+            className="h-9"
+          >
             Save
           </Button>
         </DialogFooter>

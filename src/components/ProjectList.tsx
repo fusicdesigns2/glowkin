@@ -110,17 +110,19 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
                   size="sm"
                   className="flex items-center p-2 text-white hover:bg-[#FFFFFF]/10"
                   onClick={() => toggleProjectExpand(project.id)}
-                  style={{ maxWidth: 'calc(100% - 60px)', flex: '1' }}
+                  style={{ maxWidth: 'calc(100% - 40px)', flex: '1' }}
                 >
-                  {expandedProjects[project.id] ? 
-                    <ChevronDown className="h-4 w-4 min-w-4 mr-2" /> : 
-                    <ChevronRight className="h-4 w-4 min-w-4 mr-2" />
-                  }
-                  <span className="font-semibold truncate text-left">{project.name}</span>
-                  <span className="text-xs text-gray-400 ml-1 whitespace-nowrap">({projectThreads.length})</span>
+                  <span className="flex-shrink-0 mr-2">
+                    {expandedProjects[project.id] ? 
+                      <ChevronDown className="h-4 w-4" /> : 
+                      <ChevronRight className="h-4 w-4" />
+                    }
+                  </span>
+                  <span className="font-semibold truncate text-left flex-1">{project.name}</span>
+                  <span className="text-xs text-gray-400 ml-1 whitespace-nowrap flex-shrink-0">({projectThreads.length})</span>
                 </Button>
                 
-                <div className="flex items-center ml-1">
+                <div className="flex items-center ml-1 flex-shrink-0">
                   <Button 
                     variant="ghost"
                     size="icon"
