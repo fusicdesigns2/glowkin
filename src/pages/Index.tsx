@@ -21,24 +21,34 @@ export default function Index() {
         <Loading size="lg" text="Loading application..." />
       </div>;
   }
-  return <div className="min-h-screen bg-maiBg flex flex-col">
+  return (
+    <div className="min-h-screen bg-maiBg flex flex-col">
       <Header />
       
       {/* Add a prominent upload button banner for all users */}
       
-      
       <main className="flex-grow flex">
-        {user ? <div className="flex w-full h-[80vh] relative bg-[#403E43]">
-            {isPanelOpen && <div className="bg-[#403E43] h-full">
+        {user ? 
+          <div className="flex w-full h-[80vh] relative bg-[#403E43]">
+            {isPanelOpen && 
+              <div className="bg-[#403E43] h-full">
                 <ThreadList />
-              </div>}
-            <Button onClick={togglePanel} variant="ghost" size="icon" className="absolute top-2 left-2 z-50 bg-[#403E43] text-white hover:bg-[#403E43]/80">
+              </div>
+            }
+            <Button 
+              onClick={togglePanel} 
+              variant="ghost" 
+              size="icon" 
+              className="absolute top-2 left-2 z-50 bg-[#403E43] text-white hover:bg-[#403E43]/80"
+            >
               {isPanelOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
-            <div className={`flex-grow transition-all duration-300 flex flex-col`}>
+            <div className="flex-grow transition-all duration-300 flex flex-col">
               <ChatInterface />
             </div>
-          </div> : <div className="max-w-4xl mx-auto p-8">
+          </div> 
+        : 
+          <div className="max-w-4xl mx-auto p-8">
             <div className="text-center mb-12">
               <h1 className="text-4xl font-bold mb-4 text-maiRed">Welcome to Mai Mai</h1>
               <p className="text-xl text-gray-600 mb-8">
@@ -119,12 +129,14 @@ export default function Index() {
                 </Button>
               </Link>
             </div>
-          </div>}
+          </div>
+        }
       </main>
 
       {/* Much smaller footer */}
-      <footer className="bg-[#403E43] text-white py-0.5 px-2 text-center text-xs">
+      <footer className="bg-[#403E43] text-white py-0.5 px-2 text-center text-[10px]">
         <p>&copy; {new Date().getFullYear()} Mai Mai</p>
       </footer>
-    </div>;
+    </div>
+  );
 }

@@ -18,19 +18,20 @@ import { toast } from 'sonner';
 interface ProjectThreadProps {
   thread: Thread;
   currentThreadId: string | undefined;
-  onRename: (thread: Thread) => void;
-  onSystemPromptEdit: (threadId: string) => void;
-  onMoveThread: (threadId: string) => void;
 }
 
 export function ProjectThread({
   thread,
-  currentThreadId,
-  onRename,
-  onSystemPromptEdit,
-  onMoveThread
+  currentThreadId
 }: ProjectThreadProps) {
-  const { selectThread, hideThread, unhideThread, updateThreadInList } = useChat();
+  const { 
+    selectThread, 
+    hideThread, 
+    unhideThread, 
+    updateThreadInList,
+    updateThreadSystemPrompt,
+    moveThreadToProject
+  } = useChat();
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(thread.title);
 
@@ -73,13 +74,17 @@ export function ProjectThread({
   };
 
   const handleSystemPromptEdit = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent thread selection
-    onSystemPromptEdit(thread.id);
+    e.stopPropagation();
+    // Open the system prompt dialog via the ThreadList controller
+    const systemPromptEvent = new CustomEvent('edit-system-prompt', { detail: { threadId: thread.id } });
+    document.dispatchEvent(systemPromptEvent);
   };
 
   const handleMoveThread = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent thread selection
-    onMoveThread(thread.id);
+    e.stopPropagation();
+    // Open the move thread dialog via the ThreadList controller
+    const moveThreadEvent = new CustomEvent('move-thread', { detail: { threadId: thread.id } });
+    document.dispatchEvent(moveThreadEvent);
   };
 
   return (
@@ -125,10 +130,10 @@ export function ProjectThread({
           <div className="flex space-x-1 opacity-0 group-hover:opacity-100">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="p-1 hover:bg-[#FFFFFF]/20 hover:scale-105 rounded-full transition-all duration-200 text-white"
-                  aria-label="Thread options"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 p-1"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -136,9 +141,9 @@ export function ProjectThread({
                     <circle cx="12" cy="5" r="1" />
                     <circle cx="12" cy="19" r="1" />
                   </svg>
-                </button>
+                </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="bg-gray-800 text-white">
                 <DropdownMenuItem onClick={(e) => {
                   e.stopPropagation();
                   handleTitleClick();

@@ -115,11 +115,11 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
                     <ChevronDown className="h-4 w-4 min-w-4 mr-2" /> : 
                     <ChevronRight className="h-4 w-4 min-w-4 mr-2" />
                   }
-                  <span className="font-semibold truncate max-w-[150px]">{project.name}</span>
+                  <span className="font-semibold truncate max-w-[130px]">{project.name}</span>
                   <span className="text-xs text-gray-400 ml-2 whitespace-nowrap">({projectThreads.length})</span>
                 </Button>
                 
-                <div className="flex items-center mr-1 ml-1">
+                <div className="flex items-center mr-1">
                   <Button 
                     variant="ghost"
                     size="icon"
@@ -143,7 +143,7 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent>
+                    <DropdownMenuContent align="end" className="bg-gray-800 text-white">
                       <DropdownMenuItem onClick={() => handleProjectNameEdit(project)}>
                         <Edit className="w-4 h-4 mr-2" /> Rename
                       </DropdownMenuItem>
@@ -182,9 +182,6 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
                       key={thread.id}
                       thread={thread}
                       currentThreadId={currentThread?.id}
-                      onRename={() => {}}
-                      onSystemPromptEdit={(threadId) => {}}
-                      onMoveThread={(threadId) => {}}
                     />
                   ))
                 ) : (

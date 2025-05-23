@@ -140,19 +140,30 @@ export default function ThreadList() {
     setNewThreadProjectId(undefined);
   };
 
+  // Add event listeners for custom events from ProjectThread
   useEffect(() => {
-    // Update title when current thread changes
-    if (currentThread && currentThread.messages.length > 0) {
-      const firstMessage = currentThread.messages[0];
-      if (firstMessage.role === 'user') {
-        const firstLine = firstMessage.content.split('\n')[0];
-        const truncatedTitle = firstLine.length > 30 ? 
-          firstLine.substring(0, 27) + '...' : 
-          firstLine;
-        updateThreadTitle(currentThread.id, truncatedTitle);
+    const handleEditSystemPrompt = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail && customEvent.detail.threadId) {
+        openSystemPromptDialog(customEvent.detail.threadId);
       }
-    }
-  }, [currentThread?.messages[0]?.content]);
+    };
+    
+    const handleMoveThreadEvent = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail && customEvent.detail.threadId) {
+        openMoveThreadDialog(customEvent.detail.threadId);
+      }
+    };
+    
+    document.addEventListener('edit-system-prompt', handleEditSystemPrompt);
+    document.addEventListener('move-thread', handleMoveThreadEvent);
+    
+    return () => {
+      document.removeEventListener('edit-system-prompt', handleEditSystemPrompt);
+      document.removeEventListener('move-thread', handleMoveThreadEvent);
+    };
+  }, []);
 
   return (
     <div className="w-64 bg-[#403E43] text-white border-r border-gray-700 h-[80vh] flex flex-col">
@@ -171,7 +182,7 @@ export default function ThreadList() {
                 <ListFilter className="w-4 h-4 mr-2" /> Thread Options
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-gray-800">
+            <DropdownMenuContent align="end" className="w-56 bg-gray-800 text-white">
               <DropdownMenuItem onClick={() => showAllHiddenThreads()}>
                 <Eye className="w-4 h-4 mr-2" /> Show All Hidden Threads
               </DropdownMenuItem>
@@ -234,7 +245,7 @@ export default function ThreadList() {
                               </svg>
                             </button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-gray-800">
+                          <DropdownMenuContent align="end" className="bg-gray-800 text-white">
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               handleTitleClick(thread);
@@ -303,8 +314,11 @@ export default function ThreadList() {
       </ScrollArea>
       
       {/* Move Thread Dialog */}
-      <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-gray-800">
+      <Dialog open={isMoveDialogOpen} onOpenChange={(open) => {
+        setIsMoveDialogOpen(open);
+        if (!open) setThreadToMove(null);
+      }}>
+        <DialogContent className="sm:max-w-md bg-gray-800 text-white">
           <DialogHeader>
             <DialogTitle>Move Thread to Project</DialogTitle>
           </DialogHeader>
@@ -331,7 +345,10 @@ export default function ThreadList() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsMoveDialogOpen(false)}>
+            <Button variant="secondary" onClick={() => {
+              setIsMoveDialogOpen(false);
+              setThreadToMove(null);
+            }}>
               Cancel
             </Button>
           </DialogFooter>
@@ -341,7 +358,10 @@ export default function ThreadList() {
       {/* Thread System Prompt Dialog */}
       <ThreadSystemPromptDialog
         isOpen={isSystemPromptDialogOpen}
-        onClose={() => setIsSystemPromptDialogOpen(false)}
+        onClose={() => {
+          setIsSystemPromptDialogOpen(false);
+          setThreadForSystemPrompt(null);
+        }}
         onSave={handleSaveSystemPrompt}
         initialPrompt={threads.find(t => t.id === threadForSystemPrompt)?.system_prompt || ''}
       />
