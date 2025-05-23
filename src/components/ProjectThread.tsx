@@ -72,6 +72,16 @@ export function ProjectThread({
     setEditedTitle(thread.title);
   };
 
+  const handleSystemPromptEdit = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent thread selection
+    onSystemPromptEdit(thread.id);
+  };
+
+  const handleMoveThread = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent thread selection
+    onMoveThread(thread.id);
+  };
+
   return (
     <div className="flex items-center group">
       {isEditing ? (
@@ -119,6 +129,7 @@ export function ProjectThread({
                   type="button"
                   className="p-1 hover:bg-[#FFFFFF]/20 hover:scale-105 rounded-full transition-all duration-200 text-white"
                   aria-label="Thread options"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="1" />
@@ -134,10 +145,7 @@ export function ProjectThread({
                 }}>
                   <Edit className="w-4 h-4 mr-2" /> Rename
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => {
-                  e.stopPropagation();
-                  onSystemPromptEdit(thread.id);
-                }}>
+                <DropdownMenuItem onClick={handleSystemPromptEdit}>
                   <Edit className="w-4 h-4 mr-2" /> Edit System Prompt
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={(e) => {
@@ -148,10 +156,7 @@ export function ProjectThread({
                   {thread.hidden ? 'Show Thread' : 'Hide Thread'}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={(e) => {
-                  e.stopPropagation();
-                  onMoveThread(thread.id);
-                }}>
+                <DropdownMenuItem onClick={handleMoveThread}>
                   <MoveRight className="w-4 h-4 mr-2" /> Move to Project
                 </DropdownMenuItem>
               </DropdownMenuContent>

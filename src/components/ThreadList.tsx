@@ -171,7 +171,7 @@ export default function ThreadList() {
                 <ListFilter className="w-4 h-4 mr-2" /> Thread Options
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 bg-gray-800">
               <DropdownMenuItem onClick={() => showAllHiddenThreads()}>
                 <Eye className="w-4 h-4 mr-2" /> Show All Hidden Threads
               </DropdownMenuItem>
@@ -225,6 +225,7 @@ export default function ThreadList() {
                               type="button"
                               className="p-1 hover:bg-[#FFFFFF]/20 hover:scale-105 rounded-full transition-all duration-200 text-white"
                               aria-label="Thread options"
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="1" />
@@ -233,7 +234,7 @@ export default function ThreadList() {
                               </svg>
                             </button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="bg-gray-800">
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               handleTitleClick(thread);
@@ -303,7 +304,7 @@ export default function ThreadList() {
       
       {/* Move Thread Dialog */}
       <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-gray-800">
           <DialogHeader>
             <DialogTitle>Move Thread to Project</DialogTitle>
           </DialogHeader>

@@ -176,14 +176,13 @@ export const ChatProvider = ({ children }: ChatContextProviderProps) => {
       
       {/* Error Dialog for when image generation fails */}
       <AlertDialog open={messageHandling.errorDialogOpen} onOpenChange={messageHandling.setErrorDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-gray-800 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle>Images Not Yet Supported</AlertDialogTitle>
-            <AlertDialogDescription>
-              <div className="space-y-4 text-center">
+            <AlertDialogDescription className="text-gray-300">
+              <div className="space-y-2 text-center">
                 <p>Images are not yet supported. We are working on it.</p>
-                <p>Let us know at <a href="https://facebook.com/chat-ai-box" className="text-blue-500 underline">facebook.com/chat-ai-box</a> that you'd love images and maybe we can give you an update.</p>
-                <p className="mt-4 font-semibold">Thank you for your support!</p>
+                <p className="text-xs">Thank you for your support!</p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

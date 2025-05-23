@@ -38,15 +38,27 @@ export function ThreadSystemPromptDialog({
   }, [isOpen, initialPrompt]);
   
   const handleSave = () => {
-    onSave(systemPrompt.trim());
+    try {
+      onSave(systemPrompt.trim());
+    } catch (error) {
+      console.error("Error saving system prompt:", error);
+    }
+  };
+
+  const handleClose = () => {
+    try {
+      onClose();
+    } catch (error) {
+      console.error("Error closing dialog:", error);
+    }
   };
   
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[600px] bg-gray-800 text-white">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
+          {description && <DialogDescription className="text-gray-300">{description}</DialogDescription>}
         </DialogHeader>
         
         <div className="py-4">
@@ -54,15 +66,15 @@ export function ThreadSystemPromptDialog({
             placeholder="Enter system instructions for the AI..."
             value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
-            className="min-h-[150px]"
+            className="min-h-[150px] bg-gray-700 text-white"
           />
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-gray-400 mt-2">
             System prompts help define the AI's behavior, knowledge, and tone.
           </p>
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={handleClose} className="bg-gray-700">
             Cancel
           </Button>
           <Button onClick={handleSave}>
