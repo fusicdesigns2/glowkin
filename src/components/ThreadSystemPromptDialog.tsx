@@ -36,14 +36,12 @@ export function ThreadSystemPromptDialog({
   
   // When the dialog opens, set the initial value
   useEffect(() => {
-    let isMounted = true;
-    
-    const fetchData = async () => {
-      if (isOpen) {
-        if (isMounted) setSystemPrompt(initialPrompt || '');
-        
-        // Fetch project system prompt if the thread is part of a project
-        if (currentThread?.project_id) {
+    if (isOpen) {
+      setSystemPrompt(initialPrompt || '');
+      
+      // Fetch project system prompt if the thread is part of a project
+      if (currentThread?.project_id) {
+        const fetchProjectPrompt = async () => {
           try {
             const { data, error } = await supabase
               .from('projects')
@@ -53,27 +51,22 @@ export function ThreadSystemPromptDialog({
               
             if (error) throw error;
             
-            if (data && data.system_prompt && isMounted) {
+            if (data && data.system_prompt) {
               setProjectSystemPrompt(data.system_prompt);
-            } else if (isMounted) {
+            } else {
               setProjectSystemPrompt('');
             }
           } catch (err) {
             console.error('Error fetching project system prompt:', err);
-            if (isMounted) setProjectSystemPrompt('');
+            setProjectSystemPrompt('');
           }
-        } else if (isMounted) {
-          setProjectSystemPrompt('');
-        }
+        };
+        
+        fetchProjectPrompt();
+      } else {
+        setProjectSystemPrompt('');
       }
-    };
-    
-    fetchData();
-    
-    // Cleanup function to prevent state updates after unmounting
-    return () => {
-      isMounted = false;
-    };
+    }
   }, [isOpen, initialPrompt, currentThread]);
   
   const handleSave = () => {
@@ -82,14 +75,14 @@ export function ThreadSystemPromptDialog({
 
   // Reset state when dialog closes to prevent memory leaks
   const handleClose = () => {
+    // First call the parent's onClose
     onClose();
-    // We're going to reset the state immediately to prevent memory leaks
-    setSystemPrompt('');
-    setProjectSystemPrompt('');
+    // Reset state after a small delay to prevent UI flicker
+    setTimeout(() => {
+      setSystemPrompt('');
+      setProjectSystemPrompt('');
+    }, 100);
   };
-  
-  // When dialog is open, set the initial values
-  if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>

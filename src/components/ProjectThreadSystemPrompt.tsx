@@ -30,7 +30,7 @@ export default function ProjectThreadSystemPrompt({ threadId }: ProjectThreadSys
             .from('projects')
             .select('system_prompt')
             .eq('id', thread.project_id)
-            .single();
+            .maybeSingle();
             
           if (error) throw error;
           
@@ -44,6 +44,7 @@ export default function ProjectThreadSystemPrompt({ threadId }: ProjectThreadSys
         }
       } catch (err) {
         console.error('Error fetching system prompts:', err);
+        setProjectPrompt('');
       } finally {
         setIsLoading(false);
       }
@@ -56,6 +57,10 @@ export default function ProjectThreadSystemPrompt({ threadId }: ProjectThreadSys
     return <div className="text-xs text-gray-400">Loading system prompts...</div>;
   }
   
+  if (!projectPrompt && !threadPrompt) {
+    return <p className="text-xs text-gray-400">No system prompts configured.</p>;
+  }
+  
   return (
     <div className="space-y-2">
       {projectPrompt && (
@@ -66,14 +71,10 @@ export default function ProjectThreadSystemPrompt({ threadId }: ProjectThreadSys
       )}
       
       {threadPrompt && (
-        <div className="space-y-1">
+        <div className="space-y-1 mt-2">
           <p className="text-xs text-gray-400">Thread prompt:</p>
           <p className="text-xs text-gray-300">{threadPrompt}</p>
         </div>
-      )}
-      
-      {!projectPrompt && !threadPrompt && (
-        <p className="text-xs text-gray-400">No system prompts configured.</p>
       )}
       
       {projectPrompt && threadPrompt && (
