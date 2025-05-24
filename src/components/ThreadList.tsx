@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useChat } from '@/contexts/ChatContext';
@@ -6,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Edit, Eye, EyeOff, ListFilter, MoveRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Thread, Project } from '@/types/chat';
+import { Thread } from '@/types/chat';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,7 +47,6 @@ export default function ThreadList() {
   const [isNewThreadDialogOpen, setIsNewThreadDialogOpen] = useState(false);
   const [newThreadProjectId, setNewThreadProjectId] = useState<string | undefined>(undefined);
   
-  // Filter standalone threads (not connected to any project)
   const standaloneThreads = threads.filter(thread => !thread.project_id && (!thread.hidden || showHiddenThreads));
 
   const updateThreadTitle = async (threadId: string, newTitle: string) => {
@@ -63,7 +63,6 @@ export default function ThreadList() {
 
       if (error) throw error;
       
-      // Update the thread in the context
       updateThreadInList(threadId, { title: newTitle });
       
       setEditableThreadId(null);
@@ -139,30 +138,33 @@ export default function ThreadList() {
     setNewThreadProjectId(undefined);
   };
 
-  // Add event listeners for custom events from ProjectThread
-  useEffect(() => {
-    const handleEditSystemPrompt = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail && customEvent.detail.threadId) {
-        openSystemPromptDialog(customEvent.detail.threadId);
+  // Add function to hide all hidden threads
+  const hideAllHiddenThreads = async () => {
+    try {
+      const hiddenThreads = threads.filter(thread => thread.hidden);
+      
+      for (const thread of hiddenThreads) {
+        const { error } = await supabase
+          .from('chat_threads')
+          .delete()
+          .eq('id', thread.id);
+          
+        if (error) throw error;
       }
-    };
-    
-    const handleMoveThreadEvent = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail && customEvent.detail.threadId) {
-        openMoveThreadDialog(customEvent.detail.threadId);
-      }
-    };
-    
-    document.addEventListener('edit-system-prompt', handleEditSystemPrompt);
-    document.addEventListener('move-thread', handleMoveThreadEvent);
-    
-    return () => {
-      document.removeEventListener('edit-system-prompt', handleEditSystemPrompt);
-      document.removeEventListener('move-thread', handleMoveThreadEvent);
-    };
-  }, []);
+      
+      // Remove hidden threads from local state
+      const visibleThreads = threads.filter(thread => !thread.hidden);
+      // This would need to be handled by the context, but for now we'll show a success message
+      
+      toast.success(`Deleted ${hiddenThreads.length} hidden threads`);
+      
+      // Refresh the page to update the state
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting hidden threads:', error);
+      toast.error('Failed to delete hidden threads');
+    }
+  };
 
   return (
     <div className="w-64 bg-[#403E43] text-white border-r border-gray-700 h-[80vh] flex flex-col">
@@ -188,6 +190,9 @@ export default function ThreadList() {
               <DropdownMenuItem onClick={() => hideAllThreads()}>
                 <EyeOff className="w-4 h-4 mr-2" /> Hide All Threads
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={hideAllHiddenThreads}>
+                <EyeOff className="w-4 h-4 mr-2" /> Delete All Hidden Threads
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -204,10 +209,12 @@ export default function ThreadList() {
       
       <ScrollArea className="flex-grow">
         <div className="p-2">
-          {/* Display projects and their threads */}
-          <ProjectList onCreateThreadInProject={handleCreateThreadInProject} />
+          <ProjectList 
+            onCreateThreadInProject={handleCreateThreadInProject}
+            onEditSystemPrompt={openSystemPromptDialog}
+            onMoveThread={openMoveThreadDialog}
+          />
           
-          {/* Display standalone threads (not in any project) */}
           <h2 className="text-md font-semibold text-white px-2 py-2 flex justify-between items-center">
             Threads
           </h2>
@@ -354,7 +361,6 @@ export default function ThreadList() {
         </DialogContent>
       </Dialog>
 
-      {/* Thread System Prompt Dialog */}
       <SimpleSystemPromptDialog
         isOpen={isSystemPromptDialogOpen}
         onClose={() => {
@@ -365,7 +371,6 @@ export default function ThreadList() {
         initialPrompt={threads.find(t => t.id === threadForSystemPrompt)?.system_prompt || ''}
       />
 
-      {/* New Thread with System Prompt Dialog */}
       <SimpleSystemPromptDialog
         isOpen={isNewThreadDialogOpen}
         onClose={() => {

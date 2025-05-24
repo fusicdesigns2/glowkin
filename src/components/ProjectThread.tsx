@@ -18,19 +18,21 @@ import { toast } from 'sonner';
 interface ProjectThreadProps {
   thread: Thread;
   currentThreadId: string | undefined;
+  onEditSystemPrompt: (threadId: string) => void;
+  onMoveThread: (threadId: string) => void;
 }
 
 export function ProjectThread({
   thread,
-  currentThreadId
+  currentThreadId,
+  onEditSystemPrompt,
+  onMoveThread
 }: ProjectThreadProps) {
   const { 
     selectThread, 
     hideThread, 
     unhideThread, 
-    updateThreadInList,
-    updateThreadSystemPrompt,
-    moveThreadToProject
+    updateThreadInList
   } = useChat();
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(thread.title);
@@ -49,7 +51,6 @@ export function ProjectThread({
 
       if (error) throw error;
       
-      // Update the thread in the context
       updateThreadInList(threadId, { title: newTitle });
       
       setIsEditing(false);
@@ -75,16 +76,12 @@ export function ProjectThread({
 
   const handleSystemPromptEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Open the system prompt dialog via the ThreadList controller
-    const systemPromptEvent = new CustomEvent('edit-system-prompt', { detail: { threadId: thread.id } });
-    document.dispatchEvent(systemPromptEvent);
+    onEditSystemPrompt(thread.id);
   };
 
   const handleMoveThread = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Open the move thread dialog via the ThreadList controller
-    const moveThreadEvent = new CustomEvent('move-thread', { detail: { threadId: thread.id } });
-    document.dispatchEvent(moveThreadEvent);
+    onMoveThread(thread.id);
   };
 
   const handleRemoveFromProject = async (e: React.MouseEvent) => {
@@ -98,7 +95,6 @@ export function ProjectThread({
       
       if (error) throw error;
       
-      // Update the thread in the local state
       updateThreadInList(thread.id, { project_id: null });
       
       toast.success('Thread removed from project');

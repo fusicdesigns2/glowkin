@@ -8,7 +8,6 @@ import {
   ChevronRight, 
   Plus, 
   Edit, 
-  Eye, 
   EyeOff, 
   MoreVertical,
   FolderPlus 
@@ -26,9 +25,15 @@ import { ProjectThread } from './ProjectThread';
 
 interface ProjectListProps {
   onCreateThreadInProject: (projectId: string) => void;
+  onEditSystemPrompt: (threadId: string) => void;
+  onMoveThread: (threadId: string) => void;
 }
 
-export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
+export function ProjectList({ 
+  onCreateThreadInProject, 
+  onEditSystemPrompt, 
+  onMoveThread 
+}: ProjectListProps) {
   const { 
     projects, 
     threads, 
@@ -45,7 +50,6 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
   const [editableProjectId, setEditableProjectId] = useState<string | null>(null);
   const [editedProjectName, setEditedProjectName] = useState('');
   
-  // Expand/collapse project
   const toggleProjectExpand = (projectId: string) => {
     setExpandedProjects(prev => ({
       ...prev,
@@ -53,19 +57,16 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
     }));
   };
   
-  // Open project dialog for editing
   const openEditProjectDialog = (project: Project) => {
     setEditableProject(project);
     setIsProjectDialogOpen(true);
   };
 
-  // Open project dialog for creating
   const openCreateProjectDialog = () => {
     setEditableProject(null);
     setIsProjectDialogOpen(true);
   };
   
-  // Handle project edit/save
   const handleProjectSave = async (name: string, systemPrompt: string) => {
     if (editableProject) {
       updateProject(editableProject.id, {
@@ -73,20 +74,17 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
         system_prompt: systemPrompt
       });
     } else {
-      // Create new project
       await createProject(name, systemPrompt);
     }
     setIsProjectDialogOpen(false);
     setEditableProject(null);
   };
   
-  // Handle project name edit
   const handleProjectNameEdit = (project: Project) => {
     setEditableProjectId(project.id);
     setEditedProjectName(project.name);
   };
   
-  // Save edited project name
   const saveProjectName = (projectId: string) => {
     if (editedProjectName.trim()) {
       updateProject(projectId, { name: editedProjectName });
@@ -94,7 +92,6 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
     setEditableProjectId(null);
   };
   
-  // Toggle project visibility
   const toggleProjectVisibility = (project: Project) => {
     if (project.hidden) {
       unhideProject(project.id);
@@ -103,12 +100,10 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
     }
   };
   
-  // Filter visible projects
   const visibleProjects = projects.filter(project => !project.hidden);
   
   return (
     <div className="mb-4">
-      {/* Header with create project button */}
       <div className="flex items-center justify-between mb-2 px-1">
         <h2 className="text-sm font-semibold text-gray-300">Projects</h2>
         <Button
@@ -123,7 +118,6 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
       </div>
 
       {visibleProjects.map((project) => {
-        // Get threads that belong to this project
         const projectThreads = threads.filter(thread => thread.project_id === project.id && !thread.hidden);
         
         return (
@@ -210,6 +204,8 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
                       key={thread.id}
                       thread={thread}
                       currentThreadId={currentThread?.id}
+                      onEditSystemPrompt={onEditSystemPrompt}
+                      onMoveThread={onMoveThread}
                     />
                   ))
                 ) : (

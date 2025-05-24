@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Thread, ChatMessage } from '@/types/chat';
 import { v4 as uuidv4 } from 'uuid';
-import { getActiveModelCost, calculateTokenCosts, saveMessage } from '@/utils/chatUtils';
+import { calculateTokenCosts, saveMessage } from '@/utils/chatUtils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateImageCost } from '@/utils/imageUtils';
@@ -42,62 +42,7 @@ export const useMessageHandling = (
 
     setIsLoading(true);
     try {
-      // Use native fetch instead of OpenAI SDK
-      const response = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          prompt: prompt,
-          n: 1,
-          size: "1024x1024",
-        })
-      });
-
-      const data = await response.json();
-      const imageUrl = data.data?.[0]?.url;
-
-      if (imageUrl) {
-        const newMessage: ChatMessage = {
-          id: uuidv4(),
-          role: 'assistant',
-          content: `Here is the image you requested:\n<download-image url="${imageUrl}" prompt="${prompt}"/>`,
-          timestamp: new Date(),
-          model: 'dall-e-3',
-          input_tokens: 0,
-          output_tokens: 0
-        };
-
-        const updatedMessages = [...currentThread.messages, newMessage];
-        const updatedThread: Thread = { ...currentThread, messages: updatedMessages, lastUpdated: new Date() };
-
-        setThreads(threads.map(thread => thread.id === currentThread.id ? updatedThread : thread));
-        setCurrentThread(updatedThread);
-
-        // Save message to database
-        await saveMessage(
-          currentThread.id,
-          'assistant',
-          newMessage.content,
-          'dall-e-3',
-          0,
-          0,
-          0,
-          0
-        );
-
-        // Deduct credits for image generation
-        if (credits !== undefined) {
-          const imageCost = await calculateImageCost();
-          const newCredits = credits - imageCost;
-          updateCredits(newCredits);
-        }
-        toast.success("Image generated successfully!");
-      } else {
-        toast.error("Failed to generate image.");
-      }
+      setErrorDialogOpen(true);
     } catch (error: any) {
       console.error("Error generating image:", error);
       toast.error(`Failed to generate image: ${error.message}`);
@@ -110,13 +55,18 @@ export const useMessageHandling = (
     if (!userId) return;
     if (!currentThread) return;
 
+    console.log('Starting sendMessageToAI for thread:', currentThread.id);
+    console.log('Thread project_id:', currentThread.project_id);
+
     setIsLoading(true);
     refreshFunFact();
 
     const threadSystemPrompt = currentThread.system_prompt || '';
-    const model = threadModels[currentThread.id] || selectedModel;
+    const model = threadModels[currentThread.id] || selectedModel || 'gpt-4o-mini';
 
-    // Add user message first
+    console.log('Using model:', model);
+    console.log('Thread system prompt:', threadSystemPrompt);
+
     const userMessage: ChatMessage = {
       id: uuidv4(),
       role: 'user',
@@ -137,7 +87,6 @@ export const useMessageHandling = (
     setThreads(threads.map(thread => thread.id === currentThread.id ? updatedThreadWithUser : thread));
     setCurrentThread(updatedThreadWithUser);
 
-    // Save user message to database
     await saveMessage(
       currentThread.id,
       'user',
@@ -149,12 +98,11 @@ export const useMessageHandling = (
       0
     );
 
-    // Check if the thread belongs to a project and combine system prompts if needed
     const handleSystemPrompt = async () => {
       let finalSystemPrompt = threadSystemPrompt;
       
       if (currentThread.project_id) {
-        // Fetch the project to get its system prompt
+        console.log('Thread belongs to project, fetching project system prompt');
         try {
           const { data: projectData } = await supabase
             .from('projects')
@@ -162,13 +110,15 @@ export const useMessageHandling = (
             .eq('id', currentThread.project_id)
             .single();
           
+          console.log('Project data:', projectData);
+          
           if (projectData && projectData.system_prompt) {
-            // Combine project and thread system prompts if both exist
             if (threadSystemPrompt) {
               finalSystemPrompt = `${projectData.system_prompt}\n\n${threadSystemPrompt}`;
             } else {
               finalSystemPrompt = projectData.system_prompt;
             }
+            console.log('Combined system prompt:', finalSystemPrompt);
           }
         } catch (error) {
           console.error("Error fetching project system prompt:", error);
@@ -181,15 +131,10 @@ export const useMessageHandling = (
     const combinedSystemPrompt = await handleSystemPrompt();
 
     try {
-      // Use native fetch instead of OpenAI SDK
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: model,
+      console.log('Making OpenAI API call with prompt:', combinedSystemPrompt);
+      
+      const { data: { OPENAI_API_KEY } } = await supabase.functions.invoke('chat', {
+        body: {
           messages: [
             {
               role: "system",
@@ -199,16 +144,18 @@ export const useMessageHandling = (
               role: m.role, 
               content: m.content 
             }))
-          ]
-        })
+          ],
+          model: model
+        }
       });
 
-      const completion = await response.json();
+      if (OPENAI_API_KEY?.choices && OPENAI_API_KEY.choices.length > 0) {
+        const aiMessage = OPENAI_API_KEY.choices[0].message?.content;
+        const inputTokens = OPENAI_API_KEY.usage?.prompt_tokens || 0;
+        const outputTokens = OPENAI_API_KEY.usage?.completion_tokens || 0;
 
-      if (completion.choices && completion.choices.length > 0) {
-        const aiMessage = completion.choices[0].message?.content;
-        const inputTokens = completion.usage?.prompt_tokens || 0;
-        const outputTokens = completion.usage?.completion_tokens || 0;
+        console.log('Received AI response:', aiMessage);
+        console.log('Token usage - input:', inputTokens, 'output:', outputTokens);
 
         if (aiMessage) {
           const newMessage: ChatMessage = {
@@ -227,7 +174,6 @@ export const useMessageHandling = (
           setThreads(threads.map(thread => thread.id === currentThread.id ? updatedThread : thread));
           setCurrentThread(updatedThread);
 
-          // Save AI message to database
           await saveMessage(
             currentThread.id,
             'assistant',
@@ -239,14 +185,16 @@ export const useMessageHandling = (
             0
           );
 
-          // Deduct credits based on token usage
           const tokenCost = calculateTokenCosts(inputTokens, outputTokens, model);
           if (credits !== undefined) {
             const newCredits = credits - tokenCost;
             updateCredits(newCredits);
           }
+          
+          console.log('Message handling completed successfully');
         }
       } else {
+        console.error('No response from AI or unexpected format:', OPENAI_API_KEY);
         toast.error("No response from AI.");
       }
     } catch (error: any) {
