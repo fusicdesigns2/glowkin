@@ -10,7 +10,8 @@ import {
   Edit, 
   Eye, 
   EyeOff, 
-  MoreVertical 
+  MoreVertical,
+  FolderPlus 
 } from 'lucide-react';
 import { ProjectDialog } from './ProjectDialog';
 import {
@@ -34,7 +35,8 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
     currentThread, 
     updateProject,
     hideProject,
-    unhideProject
+    unhideProject,
+    createProject
   } = useChat();
   
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
@@ -56,14 +58,23 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
     setEditableProject(project);
     setIsProjectDialogOpen(true);
   };
+
+  // Open project dialog for creating
+  const openCreateProjectDialog = () => {
+    setEditableProject(null);
+    setIsProjectDialogOpen(true);
+  };
   
   // Handle project edit/save
-  const handleProjectSave = (name: string, systemPrompt: string) => {
+  const handleProjectSave = async (name: string, systemPrompt: string) => {
     if (editableProject) {
       updateProject(editableProject.id, {
         name,
         system_prompt: systemPrompt
       });
+    } else {
+      // Create new project
+      await createProject(name, systemPrompt);
     }
     setIsProjectDialogOpen(false);
     setEditableProject(null);
@@ -97,6 +108,20 @@ export function ProjectList({ onCreateThreadInProject }: ProjectListProps) {
   
   return (
     <div className="mb-4">
+      {/* Header with create project button */}
+      <div className="flex items-center justify-between mb-2 px-1">
+        <h2 className="text-sm font-semibold text-gray-300">Projects</h2>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 p-1 text-gray-400 hover:text-white hover:bg-[#FFFFFF]/10"
+          onClick={openCreateProjectDialog}
+          title="Create new project"
+        >
+          <FolderPlus className="h-4 w-4" />
+        </Button>
+      </div>
+
       {visibleProjects.map((project) => {
         // Get threads that belong to this project
         const projectThreads = threads.filter(thread => thread.project_id === project.id && !thread.hidden);

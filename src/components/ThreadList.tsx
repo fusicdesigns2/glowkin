@@ -18,7 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ProjectList } from './ProjectList';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ThreadSystemPromptDialog } from './ThreadSystemPromptDialog';
+import { SimpleSystemPromptDialog } from './SimpleSystemPromptDialog';
 
 export default function ThreadList() {
   const { 
@@ -355,7 +355,7 @@ export default function ThreadList() {
       </Dialog>
 
       {/* Thread System Prompt Dialog */}
-      <ThreadSystemPromptDialog
+      <SimpleSystemPromptDialog
         isOpen={isSystemPromptDialogOpen}
         onClose={() => {
           setIsSystemPromptDialogOpen(false);
@@ -366,7 +366,7 @@ export default function ThreadList() {
       />
 
       {/* New Thread with System Prompt Dialog */}
-      <ThreadSystemPromptDialog
+      <SimpleSystemPromptDialog
         isOpen={isNewThreadDialogOpen}
         onClose={() => {
           setIsNewThreadDialogOpen(false);

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Thread } from '@/types/chat';
-import { Edit, Eye, EyeOff, MoveRight } from 'lucide-react';
+import { Edit, Eye, EyeOff, MoveRight, X } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -87,6 +87,27 @@ export function ProjectThread({
     document.dispatchEvent(moveThreadEvent);
   };
 
+  const handleRemoveFromProject = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const { error } = await supabase
+        .from('chat_threads')
+        .update({ project_id: null })
+        .eq('id', thread.id);
+      
+      if (error) throw error;
+      
+      // Update the thread in the local state
+      updateThreadInList(thread.id, { project_id: null });
+      
+      toast.success('Thread removed from project');
+    } catch (error) {
+      console.error('Failed to remove thread from project:', error);
+      toast.error('Failed to remove thread from project');
+    }
+  };
+
   return (
     <div className="flex items-center group">
       {isEditing ? (
@@ -163,6 +184,9 @@ export function ProjectThread({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleMoveThread}>
                   <MoveRight className="w-4 h-4 mr-2" /> Move to Project
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleRemoveFromProject}>
+                  <X className="w-4 h-4 mr-2" /> Remove from Project
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

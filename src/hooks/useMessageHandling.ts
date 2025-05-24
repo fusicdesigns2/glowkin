@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Thread, ChatMessage } from '@/types/chat';
 import { v4 as uuidv4 } from 'uuid';
-import { getActiveModelCost, calculateTokenCosts } from '@/utils/chatUtils';
+import { getActiveModelCost, calculateTokenCosts, saveMessage } from '@/utils/chatUtils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateImageCost } from '@/utils/imageUtils';
@@ -76,9 +76,20 @@ export const useMessageHandling = (
         setThreads(threads.map(thread => thread.id === currentThread.id ? updatedThread : thread));
         setCurrentThread(updatedThread);
 
+        // Save message to database
+        await saveMessage(
+          currentThread.id,
+          'assistant',
+          newMessage.content,
+          'dall-e-3',
+          0,
+          0,
+          0,
+          0
+        );
+
         // Deduct credits for image generation
         if (credits !== undefined) {
-          // Use await to get the actual cost value from the async function
           const imageCost = await calculateImageCost();
           const newCredits = credits - imageCost;
           updateCredits(newCredits);
@@ -104,6 +115,39 @@ export const useMessageHandling = (
 
     const threadSystemPrompt = currentThread.system_prompt || '';
     const model = threadModels[currentThread.id] || selectedModel;
+
+    // Add user message first
+    const userMessage: ChatMessage = {
+      id: uuidv4(),
+      role: 'user',
+      content: content,
+      timestamp: new Date(),
+      model: model,
+      input_tokens: 0,
+      output_tokens: 0
+    };
+
+    const messagesWithUser = [...currentThread.messages, userMessage];
+    const updatedThreadWithUser: Thread = { 
+      ...currentThread, 
+      messages: messagesWithUser, 
+      lastUpdated: new Date() 
+    };
+
+    setThreads(threads.map(thread => thread.id === currentThread.id ? updatedThreadWithUser : thread));
+    setCurrentThread(updatedThreadWithUser);
+
+    // Save user message to database
+    await saveMessage(
+      currentThread.id,
+      'user',
+      content,
+      model,
+      0,
+      0,
+      0,
+      0
+    );
 
     // Check if the thread belongs to a project and combine system prompts if needed
     const handleSystemPrompt = async () => {
@@ -151,11 +195,10 @@ export const useMessageHandling = (
               role: "system",
               content: combinedSystemPrompt || "You are a helpful assistant."
             },
-            ...currentThread.messages.map(m => ({ 
+            ...messagesWithUser.map(m => ({ 
               role: m.role, 
               content: m.content 
-            })),
-            { role: "user", content: content }
+            }))
           ]
         })
       });
@@ -178,11 +221,23 @@ export const useMessageHandling = (
             output_tokens: outputTokens
           };
 
-          const updatedMessages = [...currentThread.messages, newMessage];
+          const updatedMessages = [...messagesWithUser, newMessage];
           const updatedThread: Thread = { ...currentThread, messages: updatedMessages, lastUpdated: new Date() };
 
           setThreads(threads.map(thread => thread.id === currentThread.id ? updatedThread : thread));
           setCurrentThread(updatedThread);
+
+          // Save AI message to database
+          await saveMessage(
+            currentThread.id,
+            'assistant',
+            aiMessage,
+            model,
+            inputTokens,
+            outputTokens,
+            0,
+            0
+          );
 
           // Deduct credits based on token usage
           const tokenCost = calculateTokenCosts(inputTokens, outputTokens, model);
