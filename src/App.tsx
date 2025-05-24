@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound";
 import PDFUpload from "./pages/PDFUpload";
 import PDFAnalysis from "./pages/PDFAnalysis";
 import PDFList from "./pages/PDFList";
+import SocialMedia from "./pages/SocialMedia";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/pdf-upload" element={<PDFUpload />} />
               <Route path="/pdf-analysis/:id" element={<PDFAnalysis />} />
               <Route path="/pdf-list" element={<PDFList />} />
+              <Route path="/social-media" element={<SocialMedia />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ChatProvider>

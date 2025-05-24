@@ -223,6 +223,42 @@ export type Database = {
           },
         ]
       }
+      facebook_pages: {
+        Row: {
+          access_token: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          page_id: string
+          page_name: string
+          token_expires_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          page_id: string
+          page_name: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          page_id?: string
+          page_name?: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       failed_summaries: {
         Row: {
           assistant_message_id: string
@@ -478,6 +514,62 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      social_posts: {
+        Row: {
+          content: string
+          created_at: string | null
+          error_message: string | null
+          facebook_page_id: string | null
+          facebook_post_id: string | null
+          id: string
+          images: Json | null
+          posted_at: string | null
+          scheduled_for: string | null
+          stats: Json | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          error_message?: string | null
+          facebook_page_id?: string | null
+          facebook_post_id?: string | null
+          id?: string
+          images?: Json | null
+          posted_at?: string | null
+          scheduled_for?: string | null
+          stats?: Json | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          error_message?: string | null
+          facebook_page_id?: string | null
+          facebook_post_id?: string | null
+          id?: string
+          images?: Json | null
+          posted_at?: string | null
+          scheduled_for?: string | null
+          stats?: Json | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_posts_facebook_page_id_fkey"
+            columns: ["facebook_page_id"]
+            isOneToOne: false
+            referencedRelation: "facebook_pages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       summaries: {
         Row: {
