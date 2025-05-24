@@ -131,9 +131,9 @@ export const useMessageHandling = (
     const combinedSystemPrompt = await handleSystemPrompt();
 
     try {
-      console.log('Making OpenAI API call with prompt:', combinedSystemPrompt);
+      console.log('Making OpenAI API call with combined system prompt');
       
-      const { data: { OPENAI_API_KEY } } = await supabase.functions.invoke('chat', {
+      const { data, error } = await supabase.functions.invoke('chat', {
         body: {
           messages: [
             {
@@ -149,10 +149,18 @@ export const useMessageHandling = (
         }
       });
 
-      if (OPENAI_API_KEY?.choices && OPENAI_API_KEY.choices.length > 0) {
-        const aiMessage = OPENAI_API_KEY.choices[0].message?.content;
-        const inputTokens = OPENAI_API_KEY.usage?.prompt_tokens || 0;
-        const outputTokens = OPENAI_API_KEY.usage?.completion_tokens || 0;
+      if (error) {
+        console.error('Supabase function error:', error);
+        toast.error(`Failed to send message: ${error.message}`);
+        return;
+      }
+
+      console.log('Received response from edge function:', data);
+
+      if (data?.choices && data.choices.length > 0) {
+        const aiMessage = data.choices[0].message?.content;
+        const inputTokens = data.usage?.prompt_tokens || 0;
+        const outputTokens = data.usage?.completion_tokens || 0;
 
         console.log('Received AI response:', aiMessage);
         console.log('Token usage - input:', inputTokens, 'output:', outputTokens);
@@ -194,7 +202,7 @@ export const useMessageHandling = (
           console.log('Message handling completed successfully');
         }
       } else {
-        console.error('No response from AI or unexpected format:', OPENAI_API_KEY);
+        console.error('No response from AI or unexpected format:', data);
         toast.error("No response from AI.");
       }
     } catch (error: any) {
