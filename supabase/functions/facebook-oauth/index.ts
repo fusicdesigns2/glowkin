@@ -33,7 +33,18 @@ serve(async (req) => {
       throw new Error('Invalid authentication');
     }
 
-    const { action, code, pageAccessToken, pageId, pageName } = await req.json();
+    const { action, code, pageAccessToken, pageId, pageName, content, images } = await req.json();
+
+    if (action === 'get_app_config') {
+      // Return Facebook app configuration
+      return new Response(JSON.stringify({
+        success: true,
+        appId: Deno.env.get('FACEBOOK_APP_ID'),
+        redirectUri: Deno.env.get('FACEBOOK_REDIRECT_URI')
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (action === 'exchange_code') {
       // Exchange Facebook authorization code for access token
@@ -110,8 +121,6 @@ serve(async (req) => {
     }
 
     if (action === 'post_to_facebook') {
-      const { content, images, pageId } = await req.json();
-
       // Get the page access token
       const { data: pageData, error: pageError } = await supabase
         .from('facebook_pages')

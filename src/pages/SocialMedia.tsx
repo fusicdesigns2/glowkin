@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,8 +20,10 @@ interface FacebookPage {
   created_at: string;
 }
 
-const FACEBOOK_APP_ID = '1234567890123456'; // This will need to be configured
-const FACEBOOK_REDIRECT_URI = `${window.location.origin}/social-media`;
+interface FacebookConfig {
+  appId: string;
+  redirectUri: string;
+}
 
 export default function SocialMedia() {
   const { user } = useAuth();
@@ -30,10 +31,12 @@ export default function SocialMedia() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('pages');
   const [isConnecting, setIsConnecting] = useState(false);
+  const [facebookConfig, setFacebookConfig] = useState<FacebookConfig | null>(null);
 
   useEffect(() => {
     if (user) {
       loadFacebookPages();
+      loadFacebookConfig();
     }
   }, [user]);
 
@@ -57,6 +60,30 @@ export default function SocialMedia() {
     }
   }, []);
 
+  const loadFacebookConfig = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('facebook-oauth', {
+        body: {
+          action: 'get_app_config'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setFacebookConfig({
+          appId: data.appId,
+          redirectUri: data.redirectUri
+        });
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      console.error('Error loading Facebook config:', error);
+      toast.error('Failed to load Facebook configuration');
+    }
+  };
+
   const loadFacebookPages = async () => {
     try {
       const { data, error } = await supabase
@@ -75,9 +102,14 @@ export default function SocialMedia() {
   };
 
   const handleFacebookConnect = async () => {
+    if (!facebookConfig) {
+      toast.error('Facebook configuration not loaded');
+      return;
+    }
+
     const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?` +
-      `client_id=${FACEBOOK_APP_ID}&` +
-      `redirect_uri=${encodeURIComponent(FACEBOOK_REDIRECT_URI)}&` +
+      `client_id=${facebookConfig.appId}&` +
+      `redirect_uri=${encodeURIComponent(facebookConfig.redirectUri)}&` +
       `scope=pages_manage_posts,pages_read_engagement,pages_show_list&` +
       `response_type=code`;
 
@@ -194,10 +226,16 @@ export default function SocialMedia() {
                       Connect up to 2 Facebook pages to publish content directly from your chats.
                     </CardDescription>
                   </div>
-                  {canAddMorePages && (
+                  {canAddMorePages && facebookConfig && (
                     <Button onClick={handleFacebookConnect} className="bg-blue-600 hover:bg-blue-700">
                       <Plus className="h-4 w-4 mr-2" />
                       Connect Facebook Page
+                    </Button>
+                  )}
+                  {canAddMorePages && !facebookConfig && (
+                    <Button disabled className="bg-gray-400">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Loading...
                     </Button>
                   )}
                 </div>
