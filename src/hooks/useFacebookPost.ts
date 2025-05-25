@@ -46,7 +46,17 @@ export function useFacebookPost() {
           }
         });
 
-        if (error) throw error;
+        if (error) {
+          // Mark as failed in database
+          await supabase
+            .from('social_posts')
+            .update({
+              status: 'failed',
+              error_message: error.message
+            })
+            .eq('id', savedPost.id);
+          throw error;
+        }
 
         if (data.success) {
           // Update the post status

@@ -7,9 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Clock, Send, Image as ImageIcon, X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useFacebookPost } from '@/hooks/useFacebookPost';
 
 interface FacebookPage {
   id: string;
@@ -23,13 +22,12 @@ interface CreatePostProps {
 }
 
 export function CreatePost({ facebookPages }: CreatePostProps) {
-  const { user } = useAuth();
+  const { postToFacebook, isPosting } = useFacebookPost();
   const [content, setContent] = useState('');
   const [selectedPageId, setSelectedPageId] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
   const [images, setImages] = useState<File[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [postType, setPostType] = useState<'immediate' | 'scheduled'>('immediate');
 
   const activeFacebookPages = facebookPages.filter(page => page.is_active);
@@ -76,32 +74,23 @@ export function CreatePost({ facebookPages }: CreatePostProps) {
       return;
     }
 
-    setIsSubmitting(true);
+    const scheduledDateTime = postType === 'scheduled' 
+      ? new Date(`${scheduledDate}T${scheduledTime}`).toISOString()
+      : undefined;
+
+    // Check if scheduled time is in the past
+    if (postType === 'scheduled' && scheduledDateTime && new Date(scheduledDateTime) <= new Date()) {
+      toast.error('Scheduled time must be in the future');
+      return;
+    }
 
     try {
-      const scheduledFor = postType === 'scheduled' 
-        ? new Date(`${scheduledDate}T${scheduledTime}`).toISOString()
-        : null;
-
-      // For now, we'll save the post as draft/scheduled
-      // The actual Facebook posting will be implemented with edge functions
-      const { data, error } = await supabase
-        .from('social_posts')
-        .insert({
-          user_id: user?.id,
-          facebook_page_id: selectedPageId,
-          content: content.trim(),
-          images: images.map(img => ({ name: img.name, size: img.size })),
-          scheduled_for: scheduledFor,
-          status: postType === 'immediate' ? 'draft' : 'scheduled'
-        });
-
-      if (error) throw error;
-
-      toast.success(
-        postType === 'immediate' 
-          ? 'Post saved! Facebook publishing will be available soon.' 
-          : 'Post scheduled successfully!'
+      await postToFacebook(
+        selectedPageId,
+        content.trim(),
+        [], // Images will be handled in future update
+        postType === 'scheduled',
+        scheduledDateTime
       );
 
       // Reset form
@@ -113,14 +102,10 @@ export function CreatePost({ facebookPages }: CreatePostProps) {
       setPostType('immediate');
 
     } catch (error) {
-      console.error('Error creating post:', error);
-      toast.error('Failed to create post');
-    } finally {
-      setIsSubmitting(false);
+      // Error is already handled in the hook
+      console.error('Post submission error:', error);
     }
   };
-
-  const minDateTime = new Date().toISOString().slice(0, 16);
 
   if (activeFacebookPages.length === 0) {
     return (
@@ -260,11 +245,11 @@ export function CreatePost({ facebookPages }: CreatePostProps) {
 
           <Button 
             type="submit" 
-            disabled={isSubmitting || !content.trim() || !selectedPageId}
+            disabled={isPosting || !content.trim() || !selectedPageId}
             className="w-full"
           >
-            {isSubmitting ? 'Creating...' : 
-             postType === 'immediate' ? 'Create Post' : 'Schedule Post'}
+            {isPosting ? 'Processing...' : 
+             postType === 'immediate' ? 'Post Now' : 'Schedule Post'}
           </Button>
         </form>
       </CardContent>
