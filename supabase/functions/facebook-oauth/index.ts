@@ -36,24 +36,50 @@ serve(async (req) => {
     const { action, code, pageAccessToken, pageId, pageName, content, images } = await req.json();
 
     if (action === 'get_app_config') {
-      // Return Facebook app configuration
+      // Check if Facebook credentials are configured
+      const facebookAppId = Deno.env.get('FACEBOOK_APP_ID');
+      const facebookRedirectUri = Deno.env.get('FACEBOOK_REDIRECT_URI');
+      
+      if (!facebookAppId || !facebookRedirectUri) {
+        console.error('Missing Facebook credentials:', {
+          hasAppId: !!facebookAppId,
+          hasRedirectUri: !!facebookRedirectUri
+        });
+        
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Facebook app credentials not configured. Please set FACEBOOK_APP_ID and FACEBOOK_REDIRECT_URI in Supabase secrets.'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       return new Response(JSON.stringify({
         success: true,
-        appId: Deno.env.get('FACEBOOK_APP_ID'),
-        redirectUri: Deno.env.get('FACEBOOK_REDIRECT_URI')
+        appId: facebookAppId,
+        redirectUri: facebookRedirectUri
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     if (action === 'exchange_code') {
+      const facebookAppId = Deno.env.get('FACEBOOK_APP_ID');
+      const facebookAppSecret = Deno.env.get('FACEBOOK_APP_SECRET');
+      const facebookRedirectUri = Deno.env.get('FACEBOOK_REDIRECT_URI');
+      
+      if (!facebookAppId || !facebookAppSecret || !facebookRedirectUri) {
+        throw new Error('Facebook app credentials not configured');
+      }
+
       // Exchange Facebook authorization code for access token
       const tokenResponse = await fetch(
         `https://graph.facebook.com/v18.0/oauth/access_token?` +
-        `client_id=${Deno.env.get('FACEBOOK_APP_ID')}&` +
-        `client_secret=${Deno.env.get('FACEBOOK_APP_SECRET')}&` +
+        `client_id=${facebookAppId}&` +
+        `client_secret=${facebookAppSecret}&` +
         `code=${code}&` +
-        `redirect_uri=${Deno.env.get('FACEBOOK_REDIRECT_URI')}`
+        `redirect_uri=${facebookRedirectUri}`
       );
 
       const tokenData = await tokenResponse.json();
