@@ -91,6 +91,25 @@ export default function Header() {
               Sign up
             </Button>
           </div>}
+        {user && (
+          <nav className="hidden md:flex space-x-6">
+            <Link to="/" className="text-white hover:text-gray-300 transition-colors">
+              Chat
+            </Link>
+            <Link to="/pdf-upload" className="text-white hover:text-gray-300 transition-colors">
+              Content Gather
+            </Link>
+            <Link to="/social-media" className="text-white hover:text-gray-300 transition-colors">
+              Social Media
+            </Link>
+            <Link to="/usage" className="text-white hover:text-gray-300 transition-colors">
+              Usage
+            </Link>
+            <Link to="/buy-credits" className="text-white hover:text-gray-300 transition-colors">
+              Buy Credits
+            </Link>
+          </nav>
+        )}
       </div>
     </header>;
 }
