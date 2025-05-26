@@ -19,6 +19,8 @@ import PDFUpload from "./pages/PDFUpload";
 import PDFAnalysis from "./pages/PDFAnalysis";
 import PDFList from "./pages/PDFList";
 import SocialMedia from "./pages/SocialMedia";
+import SpotifyPlaylistManager from "./pages/SpotifyPlaylistManager";
+import SpotifyCallback from "./pages/SpotifyCallback";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +43,8 @@ const App = () => (
               <Route path="/pdf-analysis/:id" element={<PDFAnalysis />} />
               <Route path="/pdf-list" element={<PDFList />} />
               <Route path="/social-media" element={<SocialMedia />} />
+              <Route path="/spotify-playlists" element={<SpotifyPlaylistManager />} />
+              <Route path="/spotify-callback" element={<SpotifyCallback />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ChatProvider>

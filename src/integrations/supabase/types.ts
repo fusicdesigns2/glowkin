@@ -449,6 +449,45 @@ export type Database = {
         }
         Relationships: []
       }
+      playlist_songs: {
+        Row: {
+          added_to_app_at: string
+          album_name: string | null
+          artist_name: string
+          duration_ms: number | null
+          id: string
+          search_year: number | null
+          spotify_playlist_id: string
+          spotify_track_id: string
+          track_name: string
+          user_id: string
+        }
+        Insert: {
+          added_to_app_at?: string
+          album_name?: string | null
+          artist_name: string
+          duration_ms?: number | null
+          id?: string
+          search_year?: number | null
+          spotify_playlist_id: string
+          spotify_track_id: string
+          track_name: string
+          user_id: string
+        }
+        Update: {
+          added_to_app_at?: string
+          album_name?: string | null
+          artist_name?: string
+          duration_ms?: number | null
+          id?: string
+          search_year?: number | null
+          spotify_playlist_id?: string
+          spotify_track_id?: string
+          track_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -570,6 +609,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      spotify_playlists: {
+        Row: {
+          created_at: string
+          id: string
+          is_selected: boolean | null
+          playlist_name: string
+          spotify_playlist_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_selected?: boolean | null
+          playlist_name: string
+          spotify_playlist_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_selected?: boolean | null
+          playlist_name?: string
+          spotify_playlist_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      spotify_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string
+          refresh_token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at: string
+          refresh_token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string
+          refresh_token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       summaries: {
         Row: {
