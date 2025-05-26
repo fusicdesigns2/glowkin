@@ -6,7 +6,7 @@ import { useSpotifyPlaylists } from '@/hooks/useSpotifyPlaylists'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Play, Loader2, Clock, Music } from 'lucide-react'
+import { ArrowLeft, Play, Loader2, Clock, Music, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 
@@ -18,8 +18,10 @@ const PlaylistDetail = () => {
   
   const [playlist, setPlaylist] = useState<any>(null)
   const [songs, setSongs] = useState<any[]>([])
+  const [removedSongs, setRemovedSongs] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isRemoving, setIsRemoving] = useState(false)
 
   useEffect(() => {
     if (playlistId && user) {
@@ -34,16 +36,30 @@ const PlaylistDetail = () => {
       const playlistInfo = playlists.find(p => p.id === playlistId)
       setPlaylist(playlistInfo)
 
-      // Load songs for this playlist
-      const { data } = await supabase
+      // Load active songs for this playlist
+      const { data: activeSongs } = await supabase
         .from('playlist_songs')
         .select('*')
         .eq('user_id', user?.id)
         .eq('spotify_playlist_id', playlistId)
+        .is('removed_at', null)
         .order('added_to_app_at', { ascending: false })
 
-      if (data) {
-        setSongs(data)
+      if (activeSongs) {
+        setSongs(activeSongs)
+      }
+
+      // Load removed songs for this playlist
+      const { data: removedSongsData } = await supabase
+        .from('playlist_songs')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('spotify_playlist_id', playlistId)
+        .not('removed_at', 'is', null)
+        .order('removed_at', { ascending: false })
+
+      if (removedSongsData) {
+        setRemovedSongs(removedSongsData)
       }
     } catch (error) {
       console.error('Error loading playlist data:', error)
@@ -57,16 +73,36 @@ const PlaylistDetail = () => {
     try {
       await supabase
         .from('playlist_songs')
-        .delete()
+        .update({ removed_at: new Date().toISOString() })
         .eq('user_id', user?.id)
         .eq('spotify_playlist_id', playlistId)
         .eq('spotify_track_id', trackId)
 
-      setSongs(prev => prev.filter(s => s.spotify_track_id !== trackId))
+      await loadPlaylistData()
       toast.success('Song removed from playlist')
     } catch (error) {
       console.error('Error removing song:', error)
       toast.error('Failed to remove song')
+    }
+  }
+
+  const restoreSong = async (trackId: string) => {
+    try {
+      await supabase
+        .from('playlist_songs')
+        .update({ 
+          removed_at: null,
+          added_to_app_at: new Date().toISOString()
+        })
+        .eq('user_id', user?.id)
+        .eq('spotify_playlist_id', playlistId)
+        .eq('spotify_track_id', trackId)
+
+      await loadPlaylistData()
+      toast.success('Song restored to playlist')
+    } catch (error) {
+      console.error('Error restoring song:', error)
+      toast.error('Failed to restore song')
     }
   }
 
@@ -87,14 +123,13 @@ const PlaylistDetail = () => {
           for (const song of excessSongs) {
             await supabase
               .from('playlist_songs')
-              .delete()
+              .update({ removed_at: new Date().toISOString() })
               .eq('user_id', user?.id)
               .eq('spotify_playlist_id', playlistId)
               .eq('spotify_track_id', song.spotify_track_id)
           }
           
-          // Update local state
-          setSongs(prev => prev.slice(0, 100))
+          await loadPlaylistData()
         }
         
         toast.success('Playlist updated successfully!')
@@ -106,6 +141,53 @@ const PlaylistDetail = () => {
       toast.error('Failed to update playlist')
     } finally {
       setIsUpdating(false)
+    }
+  }
+
+  const handleRemoveAndSend = async () => {
+    if (!playlistId) return
+    
+    setIsRemoving(true)
+    try {
+      // Delete removed songs from database
+      if (removedSongs.length > 0) {
+        const removedTrackIds = removedSongs.map(song => song.spotify_track_id)
+        
+        await supabase
+          .from('playlist_songs')
+          .delete()
+          .eq('user_id', user?.id)
+          .eq('spotify_playlist_id', playlistId)
+          .in('spotify_track_id', removedTrackIds)
+      }
+
+      // Update playlist with current songs
+      const trackIds = songs.slice(0, 100).map(song => song.spotify_track_id)
+      
+      if (trackIds.length > 0) {
+        await updatePlaylist(playlistId, trackIds)
+        
+        // Handle excess songs
+        if (songs.length > 100) {
+          const excessSongs = songs.slice(100)
+          for (const song of excessSongs) {
+            await supabase
+              .from('playlist_songs')
+              .update({ removed_at: new Date().toISOString() })
+              .eq('user_id', user?.id)
+              .eq('spotify_playlist_id', playlistId)
+              .eq('spotify_track_id', song.spotify_track_id)
+          }
+        }
+      }
+      
+      await loadPlaylistData()
+      toast.success('Removed songs deleted and playlist updated!')
+    } catch (error) {
+      console.error('Error removing and sending:', error)
+      toast.error('Failed to remove and send')
+    } finally {
+      setIsRemoving(false)
     }
   }
 
@@ -164,7 +246,7 @@ const PlaylistDetail = () => {
                   {playlist.name}
                 </CardTitle>
                 <CardDescription>
-                  {songs.length} songs in this playlist
+                  {songs.length} active songs • {removedSongs.length} removed songs
                 </CardDescription>
               </div>
             </div>
@@ -172,6 +254,26 @@ const PlaylistDetail = () => {
               <Badge variant="outline">
                 {songs.length}/100 songs
               </Badge>
+              {removedSongs.length > 0 && (
+                <Button 
+                  onClick={handleRemoveAndSend}
+                  disabled={isRemoving || songs.length === 0}
+                  variant="destructive"
+                  size="sm"
+                >
+                  {isRemoving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Remove & Send ({removedSongs.length})
+                    </>
+                  )}
+                </Button>
+              )}
               <Button 
                 onClick={handleUpdatePlaylist}
                 disabled={isUpdating || songs.length === 0}
@@ -193,10 +295,10 @@ const PlaylistDetail = () => {
         </CardHeader>
       </Card>
 
-      {/* Songs List */}
+      {/* Active Songs List */}
       <Card>
         <CardHeader>
-          <CardTitle>Songs</CardTitle>
+          <CardTitle>Active Songs</CardTitle>
           {songs.length > 100 && (
             <CardDescription className="text-orange-600">
               ⚠️ This playlist has {songs.length} songs. Only the first 100 will be synced to Spotify.
@@ -246,7 +348,7 @@ const PlaylistDetail = () => {
           ) : (
             <div className="text-center py-8 text-gray-500">
               <Music className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <div className="text-lg font-medium mb-2">No songs in this playlist</div>
+              <div className="text-lg font-medium mb-2">No active songs in this playlist</div>
               <div className="text-sm">Add songs from the search results to get started</div>
               <Button 
                 className="mt-4"
@@ -258,6 +360,52 @@ const PlaylistDetail = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Removed Songs List */}
+      {removedSongs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Removed Songs ({removedSongs.length})</CardTitle>
+            <CardDescription>
+              These songs have been removed but not yet deleted. Use "Remove & Send" to permanently delete them and update Spotify.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {removedSongs.map((song) => (
+                <div 
+                  key={song.id} 
+                  className="flex items-center justify-between p-3 border rounded-lg bg-red-50 border-red-200"
+                >
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="flex-1">
+                      <div className="font-medium">{song.track_name}</div>
+                      <div className="text-sm text-gray-600">
+                        {song.artist_name} • {song.album_name}
+                      </div>
+                      <div className="text-xs text-gray-500 flex items-center gap-4">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatDuration(song.duration_ms)}
+                        </span>
+                        <span>Removed: {new Date(song.removed_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => restoreSong(song.spotify_track_id)}
+                    className="text-green-600 hover:text-green-700"
+                  >
+                    Restore
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

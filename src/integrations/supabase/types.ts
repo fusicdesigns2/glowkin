@@ -456,6 +456,7 @@ export type Database = {
           artist_name: string
           duration_ms: number | null
           id: string
+          removed_at: string | null
           search_year: number | null
           spotify_playlist_id: string
           spotify_track_id: string
@@ -468,6 +469,7 @@ export type Database = {
           artist_name: string
           duration_ms?: number | null
           id?: string
+          removed_at?: string | null
           search_year?: number | null
           spotify_playlist_id: string
           spotify_track_id: string
@@ -480,6 +482,7 @@ export type Database = {
           artist_name?: string
           duration_ms?: number | null
           id?: string
+          removed_at?: string | null
           search_year?: number | null
           spotify_playlist_id?: string
           spotify_track_id?: string
