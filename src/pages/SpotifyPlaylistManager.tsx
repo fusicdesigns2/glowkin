@@ -7,13 +7,15 @@ import { useSpotifySearch } from '@/hooks/useSpotifySearch'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Music, Search, Plus, Play, Clock } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Loader2, Music, Search, Plus, Play, Clock, ChevronDown, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
+import { useNavigate } from 'react-router-dom'
 
 const SpotifyPlaylistManager = () => {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { spotifyUser, hasValidToken, isLoading: authLoading, initiateSpotifyAuth } = useSpotifyAuth()
   const { playlists, selectedPlaylists, isLoading: playlistsLoading, fetchPlaylists, togglePlaylistSelection, updatePlaylist } = useSpotifyPlaylists()
@@ -22,6 +24,7 @@ const SpotifyPlaylistManager = () => {
   const [songQueries, setSongQueries] = useState('')
   const [playlistSongs, setPlaylistSongs] = useState<{ [playlistId: string]: any[] }>({})
   const [isUpdatingPlaylists, setIsUpdatingPlaylists] = useState(false)
+  const [isCleaningUp, setIsCleaningUp] = useState(false)
 
   useEffect(() => {
     if (hasValidToken && playlists.length === 0) {
@@ -57,6 +60,32 @@ const SpotifyPlaylistManager = () => {
       }
     } catch (error) {
       console.error('Error loading playlist songs:', error)
+    }
+  }
+
+  const cleanUpQueries = async () => {
+    if (!songQueries.trim()) {
+      toast.error('Please enter song queries first')
+      return
+    }
+
+    setIsCleaningUp(true)
+    try {
+      const response = await supabase.functions.invoke('clean-song-queries', {
+        body: { queries: songQueries }
+      })
+
+      if (response.data?.success) {
+        setSongQueries(response.data.cleanedQueries)
+        toast.success('Song queries cleaned up!')
+      } else {
+        throw new Error(response.data?.error || 'Failed to clean up queries')
+      }
+    } catch (error) {
+      console.error('Error cleaning up queries:', error)
+      toast.error('Failed to clean up queries')
+    } finally {
+      setIsCleaningUp(false)
     }
   }
 
@@ -170,6 +199,18 @@ const SpotifyPlaylistManager = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 
+  // Sort playlists by last updated (most recent first)
+  const sortedSelectedPlaylists = selectedPlaylists
+    .map(id => playlists.find(p => p.id === id))
+    .filter(Boolean)
+    .sort((a, b) => {
+      const aSongs = playlistSongs[a!.id] || []
+      const bSongs = playlistSongs[b!.id] || []
+      const aLastUpdated = aSongs.length > 0 ? new Date(aSongs[0].added_to_app_at).getTime() : 0
+      const bLastUpdated = bSongs.length > 0 ? new Date(bSongs[0].added_to_app_at).getTime() : 0
+      return bLastUpdated - aLastUpdated
+    })
+
   if (!user) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -217,250 +258,289 @@ const SpotifyPlaylistManager = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      {/* User Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Music className="h-6 w-6" />
-            Spotify Playlist Manager
-          </CardTitle>
-          <CardDescription>
-            Connected as: <strong>{spotifyUser?.display_name || 'Unknown User'}</strong>
-          </CardDescription>
-        </CardHeader>
-      </Card>
+    <div className="container mx-auto px-4 py-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Search and Results */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* User Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Music className="h-6 w-6" />
+                Spotify Playlist Manager
+              </CardTitle>
+              <CardDescription>
+                Connected as: <strong>{spotifyUser?.display_name || 'Unknown User'}</strong>
+              </CardDescription>
+            </CardHeader>
+          </Card>
 
-      {/* Song Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-6 w-6" />
-            Search Songs
-          </CardTitle>
-          <CardDescription>
-            Enter up to 10 song queries (one per line). Search starts from {currentYear}.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Textarea
-            placeholder="Enter song queries here, one per line&#10;Example:&#10;Shape of You Ed Sheeran&#10;Blinding Lights The Weeknd&#10;Watermelon Sugar Harry Styles"
-            value={songQueries}
-            onChange={(e) => setSongQueries(e.target.value)}
-            rows={6}
-          />
-          <div className="flex gap-2">
-            <Button onClick={handleSearch} disabled={isSearching}>
-              {isSearching ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Searching {currentYear}...
-                </>
-              ) : (
-                <>
-                  <Search className="mr-2 h-4 w-4" />
-                  Search {currentYear}
-                </>
-              )}
-            </Button>
-            
-            {searchResults.length > 0 && (
-              <Button 
-                variant="outline" 
-                onClick={handleSearchPreviousYear}
-                disabled={isSearching}
-              >
-                Search {currentYear - 1}
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Search Results */}
-      {searchResults.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Search Results</CardTitle>
-            <CardDescription>
-              Drag songs to your selected playlists or click the + button
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {searchResults.map((result, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <h4 className="font-semibold mb-2">
-                    Query: "{result.query}"
-                    <Badge variant="secondary" className="ml-2">{result.year}</Badge>
-                  </h4>
-                  {result.tracks.length > 0 ? (
-                    <div className="grid gap-2">
-                      {result.tracks.map((track) => (
-                        <div key={track.id} className="flex items-center justify-between p-2 border rounded">
-                          <div className="flex-1">
-                            <div className="font-medium">{track.name}</div>
-                            <div className="text-sm text-gray-600">
-                              {track.artists.map(a => a.name).join(', ')} • {track.album.name}
-                            </div>
-                            <div className="text-xs text-gray-500 flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatDuration(track.duration_ms)}
-                            </div>
-                          </div>
-                          <div className="flex gap-1">
-                            {selectedPlaylists.map(playlistId => {
-                              const playlist = playlists.find(p => p.id === playlistId)
-                              const isAdded = playlistSongs[playlistId]?.some(s => s.spotify_track_id === track.id)
-                              
-                              return (
-                                <Button
-                                  key={playlistId}
-                                  size="sm"
-                                  variant={isAdded ? "default" : "outline"}
-                                  onClick={() => isAdded 
-                                    ? removeSongFromPlaylist(track.id, playlistId)
-                                    : addSongToPlaylist(track, playlistId)
-                                  }
-                                  title={`${isAdded ? 'Remove from' : 'Add to'} ${playlist?.name}`}
-                                >
-                                  {isAdded ? '✓' : '+'}
-                                </Button>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-gray-500 italic">No matches found for {result.year}</div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Playlist Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Playlists to Manage</CardTitle>
-          <CardDescription>
-            Choose up to 20 playlists to update
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {playlistsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <span className="ml-2">Loading playlists...</span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {playlists.map((playlist) => (
-                <div
-                  key={playlist.id}
-                  className="flex items-center space-x-2 p-3 border rounded-lg"
+          {/* Song Search */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-6 w-6" />
+                Search Songs
+              </CardTitle>
+              <CardDescription>
+                Enter up to 10 song queries (one per line). Search starts from {currentYear}.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                placeholder="Enter song queries here, one per line&#10;Example:&#10;Shape of You Ed Sheeran&#10;Blinding Lights The Weeknd&#10;Watermelon Sugar Harry Styles"
+                value={songQueries}
+                onChange={(e) => setSongQueries(e.target.value)}
+                rows={6}
+              />
+              <div className="flex gap-2 flex-wrap">
+                <Button 
+                  onClick={cleanUpQueries} 
+                  disabled={isCleaningUp}
+                  variant="outline"
                 >
-                  <Checkbox
-                    checked={selectedPlaylists.includes(playlist.id)}
-                    onCheckedChange={() => togglePlaylistSelection(playlist.id)}
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium truncate">{playlist.name}</div>
-                    <div className="text-sm text-gray-600">
-                      {playlist.tracks.total} tracks
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Selected Playlists with Songs */}
-      {selectedPlaylists.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Selected Playlists ({selectedPlaylists.length})</span>
-              <Button 
-                onClick={handleUpdateAllPlaylists}
-                disabled={isUpdatingPlaylists}
-              >
-                {isUpdatingPlaylists ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <Play className="mr-2 h-4 w-4" />
-                    Update All Playlists
-                  </>
-                )}
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {selectedPlaylists.map(playlistId => {
-                const playlist = playlists.find(p => p.id === playlistId)
-                const songs = playlistSongs[playlistId] || []
+                  {isCleaningUp ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Cleaning...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Clean up
+                    </>
+                  )}
+                </Button>
                 
-                return (
-                  <div key={playlistId} className="border rounded-lg p-4">
-                    <h4 className="font-semibold mb-3 flex items-center justify-between">
-                      <span>{playlist?.name}</span>
-                      <Badge variant="outline">
-                        {songs.length}/100 songs
-                      </Badge>
-                    </h4>
-                    
-                    {songs.length > 0 ? (
-                      <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {songs.slice(0, 100).map((song, index) => (
-                          <div key={song.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                            <div className="flex-1">
-                              <div className="font-medium">{song.track_name}</div>
-                              <div className="text-sm text-gray-600">
-                                {song.artist_name} • {song.album_name}
+                <Button onClick={handleSearch} disabled={isSearching}>
+                  {isSearching ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Searching {currentYear}...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="mr-2 h-4 w-4" />
+                      Search {currentYear}
+                    </>
+                  )}
+                </Button>
+                
+                {searchResults.length > 0 && (
+                  <Button 
+                    variant="outline" 
+                    onClick={handleSearchPreviousYear}
+                    disabled={isSearching}
+                  >
+                    Search {currentYear - 1}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Search Results */}
+          {searchResults.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Search Results</CardTitle>
+                <CardDescription>
+                  Add songs to your playlists using the dropdown menu
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {searchResults.map((result, index) => (
+                    <div key={index} className="border rounded-lg p-4">
+                      <h4 className="font-semibold mb-2">
+                        Query: "{result.query}"
+                        <Badge variant="secondary" className="ml-2">{result.year}</Badge>
+                      </h4>
+                      {result.tracks.length > 0 ? (
+                        <div className="grid gap-2">
+                          {result.tracks.map((track) => (
+                            <div key={track.id} className="flex items-center justify-between p-2 border rounded">
+                              <div className="flex-1">
+                                <div className="font-medium">{track.name}</div>
+                                <div className="text-sm text-gray-600">
+                                  {track.artists.map(a => a.name).join(', ')} • {track.album.name}
+                                </div>
+                                <div className="text-xs text-gray-500 flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {formatDuration(track.duration_ms)}
+                                </div>
                               </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    Add to Playlist <ChevronDown className="ml-1 h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  {selectedPlaylists
+                                    .map(id => playlists.find(p => p.id === id))
+                                    .filter(Boolean)
+                                    .sort((a, b) => a!.name.localeCompare(b!.name))
+                                    .map(playlist => {
+                                      const isAdded = playlistSongs[playlist!.id]?.some(s => s.spotify_track_id === track.id)
+                                      return (
+                                        <DropdownMenuItem
+                                          key={playlist!.id}
+                                          onClick={() => isAdded 
+                                            ? removeSongFromPlaylist(track.id, playlist!.id)
+                                            : addSongToPlaylist(track, playlist!.id)
+                                          }
+                                        >
+                                          {isAdded ? '✓ ' : ''}{playlist!.name}
+                                        </DropdownMenuItem>
+                                      )
+                                    })}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="text-xs">
-                                #{index + 1}
-                              </Badge>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeSongFromPlaylist(song.spotify_track_id, playlistId)}
-                              >
-                                ✕
-                              </Button>
-                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-gray-500 italic">No matches found for {result.year}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Playlist Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Playlists to Manage</CardTitle>
+              <CardDescription>
+                Choose up to 20 playlists to update
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {playlistsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <span className="ml-2">Loading playlists...</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {playlists.map((playlist) => (
+                    <div
+                      key={playlist.id}
+                      className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                      onClick={() => togglePlaylistSelection(playlist.id)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedPlaylists.includes(playlist.id)}
+                        onChange={() => {}}
+                        className="rounded"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium truncate">{playlist.name}</div>
+                        <div className="text-sm text-gray-600">
+                          {playlist.tracks.total} tracks
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column - Selected Playlists */}
+        <div className="space-y-6">
+          {selectedPlaylists.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Selected Playlists ({selectedPlaylists.length})</span>
+                  <Button 
+                    onClick={handleUpdateAllPlaylists}
+                    disabled={isUpdatingPlaylists}
+                    size="sm"
+                  >
+                    {isUpdatingPlaylists ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-4 w-4" />
+                        Update All
+                      </>
+                    )}
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {sortedSelectedPlaylists.map(playlist => {
+                    if (!playlist) return null
+                    const songs = playlistSongs[playlist.id] || []
+                    
+                    return (
+                      <div key={playlist.id} className="border rounded-lg p-3">
+                        <div 
+                          className="flex items-center justify-between mb-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
+                          onClick={() => navigate(`/playlist/${playlist.id}`)}
+                        >
+                          <h4 className="font-semibold truncate">{playlist.name}</h4>
+                          <Badge variant="outline">
+                            {songs.length}/100
+                          </Badge>
+                        </div>
+                        
+                        <div className="text-xs text-gray-500 mb-2">
+                          {songs.length > 0 && `Last updated: ${new Date(songs[0].added_to_app_at).toLocaleDateString()}`}
+                        </div>
+                        
+                        {songs.length > 0 ? (
+                          <div className="space-y-1 max-h-40 overflow-y-auto">
+                            {songs.slice(0, 5).map((song, index) => (
+                              <div key={song.id} className="text-xs flex items-center justify-between p-1 bg-gray-50 rounded">
+                                <div className="truncate">
+                                  <span className="font-medium">{song.track_name}</span>
+                                  <span className="text-gray-500"> • {song.artist_name}</span>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-4 w-4 p-0 text-gray-400 hover:text-red-500"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    removeSongFromPlaylist(song.spotify_track_id, playlist.id)
+                                  }}
+                                >
+                                  ✕
+                                </Button>
+                              </div>
+                            ))}
+                            {songs.length > 5 && (
+                              <div className="text-xs text-gray-500 text-center py-1">
+                                +{songs.length - 5} more songs
+                              </div>
+                            )}
                           </div>
-                        ))}
-                        {songs.length > 100 && (
-                          <div className="text-sm text-orange-600 font-medium">
-                            ⚠️ {songs.length - 100} excess songs will be removed to maintain 100-song limit
+                        ) : (
+                          <div className="text-gray-500 italic text-center py-2 text-xs">
+                            No songs added yet
                           </div>
                         )}
                       </div>
-                    ) : (
-                      <div className="text-gray-500 italic text-center py-4">
-                        No songs added yet. Search and add songs above.
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

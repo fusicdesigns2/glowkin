@@ -21,6 +21,7 @@ import PDFList from "./pages/PDFList";
 import SocialMedia from "./pages/SocialMedia";
 import SpotifyPlaylistManager from "./pages/SpotifyPlaylistManager";
 import SpotifyCallback from "./pages/SpotifyCallback";
+import PlaylistDetail from "./pages/PlaylistDetail";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/social-media" element={<SocialMedia />} />
               <Route path="/spotify-playlists" element={<SpotifyPlaylistManager />} />
               <Route path="/spotify-callback" element={<SpotifyCallback />} />
+              <Route path="/playlist/:playlistId" element={<PlaylistDetail />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ChatProvider>
