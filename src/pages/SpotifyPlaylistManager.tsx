@@ -49,18 +49,110 @@ const SpotifyPlaylistManager = () => {
     if (!user || playlists.length === 0) return
 
     try {
-      const playlistsToStore = playlists.map((playlist: any) => ({
-        user_id: user.id,
-        spotify_playlist_id: playlist.id,
-        playlist_name: playlist.name,
-        is_selected: selectedPlaylists.includes(playlist.id)
-      }))
-
-      await supabase
+      // Get existing playlists from database
+      const { data: existingPlaylists } = await supabase
         .from('spotify_playlists')
-        .upsert(playlistsToStore, { onConflict: 'user_id,spotify_playlist_id' })
+        .select('spotify_playlist_id')
+        .eq('user_id', user.id)
+
+      const existingPlaylistIds = new Set(existingPlaylists?.map(p => p.spotify_playlist_id) || [])
+
+      // Only insert playlists that don't already exist
+      const playlistsToStore = playlists
+        .filter((playlist: any) => !existingPlaylistIds.has(playlist.id))
+        .map((playlist: any) => ({
+          user_id: user.id,
+          spotify_playlist_id: playlist.id,
+          playlist_name: playlist.name,
+          is_selected: selectedPlaylists.includes(playlist.id)
+        }))
+
+      if (playlistsToStore.length > 0) {
+        await supabase
+          .from('spotify_playlists')
+          .insert(playlistsToStore)
+        
+        console.log(`Added ${playlistsToStore.length} new playlists to database`)
+      }
+
+      // Now fetch and store songs for each playlist
+      await fetchAndStoreSongsForPlaylists()
     } catch (error) {
       console.error('Error updating playlists in database:', error)
+    }
+  }
+
+  const fetchAndStoreSongsForPlaylists = async () => {
+    if (!user) return
+
+    try {
+      for (const playlist of playlists) {
+        // Get playlist tracks from Spotify
+        const response = await supabase.functions.invoke('spotify-api', {
+          body: { 
+            action: 'get_playlist_tracks', 
+            playlistId: playlist.id 
+          }
+        })
+
+        if (response.data?.success && response.data.tracks) {
+          const tracks = response.data.tracks
+
+          // Check which songs are already in playlist_songs table
+          const { data: existingSongs } = await supabase
+            .from('playlist_songs')
+            .select('spotify_track_id')
+            .eq('user_id', user.id)
+            .eq('spotify_playlist_id', playlist.id)
+
+          const existingTrackIds = new Set(existingSongs?.map(s => s.spotify_track_id) || [])
+
+          // Insert new songs
+          const songsToInsert = tracks
+            .filter((track: any) => !existingTrackIds.has(track.id))
+            .map((track: any) => ({
+              user_id: user.id,
+              spotify_playlist_id: playlist.id,
+              spotify_track_id: track.id,
+              track_name: track.name,
+              artist_name: track.artists.map((a: any) => a.name).join(', '),
+              album_name: track.album.name,
+              duration_ms: track.duration_ms
+            }))
+
+          if (songsToInsert.length > 0) {
+            await supabase
+              .from('playlist_songs')
+              .insert(songsToInsert)
+          }
+
+          // Check which songs are in songs_in_playlist table
+          const { data: existingPlaylistSongs } = await supabase
+            .from('songs_in_playlist')
+            .select('track_id')
+            .eq('user_id', user.id)
+            .eq('playlist_id', playlist.id)
+
+          const existingPlaylistTrackIds = new Set(existingPlaylistSongs?.map(s => s.track_id) || [])
+
+          // Insert into songs_in_playlist for new tracks
+          const playlistSongsToInsert = tracks
+            .filter((track: any) => !existingPlaylistTrackIds.has(track.id))
+            .map((track: any) => ({
+              user_id: user.id,
+              playlist_id: playlist.id,
+              track_id: track.id
+            }))
+
+          if (playlistSongsToInsert.length > 0) {
+            await supabase
+              .from('songs_in_playlist')
+              .insert(playlistSongsToInsert)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching and storing songs for playlists:', error)
     }
   }
 
@@ -173,6 +265,25 @@ const SpotifyPlaylistManager = () => {
           .insert(songData)
       }
 
+      // Also add to songs_in_playlist if not already there
+      const { data: existingPlaylistSong } = await supabase
+        .from('songs_in_playlist')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('playlist_id', playlistId)
+        .eq('track_id', track.id)
+        .single()
+
+      if (!existingPlaylistSong) {
+        await supabase
+          .from('songs_in_playlist')
+          .insert({
+            user_id: user?.id,
+            playlist_id: playlistId,
+            track_id: track.id
+          })
+      }
+
       await loadPlaylistSongs()
       toast.success('Song added to playlist')
     } catch (error) {
@@ -236,8 +347,10 @@ const SpotifyPlaylistManager = () => {
   }
 
   const handleDragStart = (e: React.DragEvent, track: any) => {
+    console.log('Drag started with track:', track.name)
     setDraggedTrack(track)
     e.dataTransfer.effectAllowed = 'copy'
+    e.dataTransfer.setData('text/plain', track.id)
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -247,6 +360,7 @@ const SpotifyPlaylistManager = () => {
 
   const handleDrop = (e: React.DragEvent, playlistId: string) => {
     e.preventDefault()
+    console.log('Drop event on playlist:', playlistId, 'with track:', draggedTrack?.name)
     if (draggedTrack) {
       addSongToPlaylist(draggedTrack, playlistId)
       setDraggedTrack(null)
@@ -320,7 +434,7 @@ const SpotifyPlaylistManager = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Search and Results */}
+        {/* Left Column - Search, Results, and Playlist Selection */}
         <div className="lg:col-span-2 space-y-6">
           {/* User Info */}
           <Card>
@@ -405,7 +519,7 @@ const SpotifyPlaylistManager = () => {
               <CardHeader>
                 <CardTitle>Search Results</CardTitle>
                 <CardDescription>
-                  Drag songs to playlists or use the dropdown menu to add them
+                  Drag songs to playlists on the right or use the dropdown menu to add them
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -421,7 +535,7 @@ const SpotifyPlaylistManager = () => {
                           {result.tracks.map((track) => (
                             <div 
                               key={track.id} 
-                              className="flex items-center justify-between p-2 border rounded cursor-move hover:bg-gray-50"
+                              className="flex items-center justify-between p-2 border rounded cursor-move hover:bg-gray-50 transition-colors"
                               draggable
                               onDragStart={(e) => handleDragStart(e, track)}
                             >
@@ -480,7 +594,7 @@ const SpotifyPlaylistManager = () => {
             <CardHeader>
               <CardTitle>Select Playlists to Manage</CardTitle>
               <CardDescription>
-                Choose up to 20 playlists to update
+                Choose playlists to manage (selected playlists appear on the right)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -552,7 +666,7 @@ const SpotifyPlaylistManager = () => {
                     return (
                       <div 
                         key={playlist.id} 
-                        className="border rounded-lg p-3"
+                        className="border-2 border-dashed border-gray-200 rounded-lg p-3 transition-colors hover:border-blue-300"
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, playlist.id)}
                       >
@@ -604,8 +718,8 @@ const SpotifyPlaylistManager = () => {
                             )}
                           </div>
                         ) : (
-                          <div className="text-gray-500 italic text-center py-2 text-xs border-2 border-dashed border-gray-200 rounded">
-                            Drop songs here or use the dropdown
+                          <div className="text-gray-500 italic text-center py-4 text-xs border-2 border-dashed border-gray-200 rounded bg-gray-50">
+                            Drop songs here or use the dropdown menu
                           </div>
                         )}
                       </div>

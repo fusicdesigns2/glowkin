@@ -61,7 +61,7 @@ serve(async (req) => {
     }
 
     if (action === 'get_playlists') {
-      const response = await makeSpotifyRequest('https://api.spotify.com/v1/me/playlists?limit=20')
+      const response = await makeSpotifyRequest('https://api.spotify.com/v1/me/playlists?limit=50')
       const data = await response.json()
       
       if (!response.ok) {
@@ -83,6 +83,24 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         success: true,
         playlists: data.items
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (action === 'get_playlist_tracks') {
+      const response = await makeSpotifyRequest(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50`)
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Failed to fetch playlist tracks')
+      }
+
+      const tracks = data.items.map((item: any) => item.track).filter((track: any) => track && track.id)
+
+      return new Response(JSON.stringify({
+        success: true,
+        tracks
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })

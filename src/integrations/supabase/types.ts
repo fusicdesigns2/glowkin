@@ -613,6 +613,30 @@ export type Database = {
           },
         ]
       }
+      songs_in_playlist: {
+        Row: {
+          added_at: string
+          id: string
+          playlist_id: string
+          track_id: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          id?: string
+          playlist_id: string
+          track_id: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          id?: string
+          playlist_id?: string
+          track_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       spotify_playlists: {
         Row: {
           created_at: string
