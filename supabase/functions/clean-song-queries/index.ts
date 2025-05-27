@@ -22,62 +22,55 @@ serve(async (req) => {
     const cleanedLines = lines.map(line => {
       let cleaned = line.trim()
       
-      // Remove common metadata patterns that appear in track listings
-      cleaned = cleaned.replace(/^\d+\.\s*/, '') // Remove numbering "1. "
-      cleaned = cleaned.replace(/\$\d+\.\d+$/, '') // Remove price at end "$1.49"
-      cleaned = cleaned.replace(/\d{4}-\d{2}-\d{2}$/, '') // Remove release date "2025-02-28"
-      cleaned = cleaned.replace(/\d{3} BPM.*$/, '') // Remove BPM and key info
-      cleaned = cleaned.replace(/^\w+\s*\/\s*/, '') // Remove "Genre /" prefix
-      cleaned = cleaned.replace(/^.*\s*\/\s*/, '') // Remove label info before "/"
+      // Remove numbering at the start "1.", "2.", etc.
+      cleaned = cleaned.replace(/^\d+\.?\s*/, '')
       
-      // Split into parts to identify track name and artist
-      const parts = cleaned.split(/\s*–\s*|\s*-\s*/)
-      if (parts.length >= 2) {
-        const artist = parts[0].trim()
-        const trackPart = parts[1].trim()
-        
-        // Extract remix info and put it in brackets
-        const remixPatterns = [
-          /(Original|Extended|Radio|Club|Vocal|Instrumental|Dub|Acid|Deep|Tech|Progressive)\s*(Mix|Version|Edit)/gi,
-          /(Remix|Mix|Edit|Version|Bootleg|Rework|Flip)$/gi
-        ]
-        
-        let remixInfo = ''
-        let cleanTrack = trackPart
-        
-        remixPatterns.forEach(pattern => {
-          const match = cleanTrack.match(pattern)
-          if (match) {
-            remixInfo = match[0]
-            cleanTrack = cleanTrack.replace(pattern, '').trim()
-          }
-        })
-        
-        // Construct the cleaned query
-        if (remixInfo) {
-          cleaned = `${artist} – ${cleanTrack} [${remixInfo}]`
-        } else {
-          cleaned = `${artist} – ${cleanTrack}`
+      // Remove price at end "$1.49"
+      cleaned = cleaned.replace(/\$\d+\.\d+\s*$/, '')
+      
+      // Remove release date "2025-02-28"
+      cleaned = cleaned.replace(/\d{4}-\d{2}-\d{2}\s*$/, '')
+      
+      // Remove BPM and key info "128 BPM - Ab Minor"
+      cleaned = cleaned.replace(/\d{2,3}\s*BPM\s*-\s*[A-G][b#]?\s*(Major|Minor|major|minor)\s*$/, '')
+      
+      // Remove genre info at the end if it's a single word
+      cleaned = cleaned.replace(/\s+(House|Tech House|Funky House|Progressive|Trance|Techno|Dance|Electronic)\s*$/, '')
+      
+      // Remove label info that appears after artist but before track
+      cleaned = cleaned.replace(/\n.*?(?=\n\d+|$)/g, '')
+      
+      // Handle multiline format where title is on one line, artist on another
+      const titleMatch = cleaned.match(/^(.+?)\s*\n(.+)/)
+      if (titleMatch) {
+        const title = titleMatch[1].trim()
+        const artist = titleMatch[2].trim()
+        cleaned = `${artist} – ${title}`
+      }
+      
+      // Look for remix/mix info and put it in brackets
+      const remixPatterns = [
+        /\b(Original|Extended|Radio|Club|Vocal|Instrumental|Dub|Acid|Deep|Tech|Progressive|Radio Edit|Club Mix|Vocal Mix|Dub Mix)\s*(Mix|Version|Edit)\b/gi,
+        /\b(Remix|Mix|Edit|Version|Bootleg|Rework|Flip)\b(?!\s*\])/gi
+      ]
+      
+      let remixInfo = ''
+      
+      remixPatterns.forEach(pattern => {
+        const matches = cleaned.match(pattern)
+        if (matches) {
+          remixInfo = matches[0]
+          cleaned = cleaned.replace(pattern, '').trim()
         }
-      } else {
-        // Fallback: just extract remix info from single line
-        let remixInfo = ''
-        const remixPatterns = [
-          /(Original|Extended|Radio|Club|Vocal|Instrumental|Dub|Acid|Deep|Tech|Progressive)\s*(Mix|Version|Edit)/gi,
-          /(Remix|Mix|Edit|Version|Bootleg|Rework|Flip)$/gi
-        ]
-        
-        remixPatterns.forEach(pattern => {
-          const match = cleaned.match(pattern)
-          if (match) {
-            remixInfo = match[0]
-            cleaned = cleaned.replace(pattern, '').trim()
-          }
-        })
-        
-        if (remixInfo) {
-          cleaned = `${cleaned} [${remixInfo}]`
-        }
+      })
+      
+      // Clean up extra spaces and dashes
+      cleaned = cleaned.replace(/\s+/g, ' ').trim()
+      cleaned = cleaned.replace(/\s*–\s*$/, '').trim()
+      
+      // Add remix info in brackets if found
+      if (remixInfo) {
+        cleaned = `${cleaned} [${remixInfo}]`
       }
       
       return cleaned

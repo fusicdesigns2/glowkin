@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSpotifyAuth } from '@/hooks/useSpotifyAuth'
@@ -413,6 +412,23 @@ const SpotifyPlaylistManager = () => {
       return bLastUpdated - aLastUpdated
     })
 
+  const getYearColor = (year: number) => {
+    const colors = {
+      2025: 'bg-blue-100 text-blue-800',
+      2024: 'bg-green-100 text-green-800', 
+      2023: 'bg-purple-100 text-purple-800',
+      2022: 'bg-orange-100 text-orange-800',
+      2021: 'bg-red-100 text-red-800',
+      2020: 'bg-yellow-100 text-yellow-800',
+      2019: 'bg-pink-100 text-pink-800',
+      2018: 'bg-indigo-100 text-indigo-800',
+      2017: 'bg-gray-100 text-gray-800',
+      2016: 'bg-cyan-100 text-cyan-800',
+      2015: 'bg-lime-100 text-lime-800',
+    }
+    return colors[year as keyof typeof colors] || 'bg-gray-100 text-gray-800'
+  }
+
   if (!user) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -587,10 +603,9 @@ const SpotifyPlaylistManager = () => {
               <CardContent>
                 <div className="space-y-4">
                   {searchResults.map((result, index) => (
-                    <div key={`${result.query}-${result.year}-${index}`} className="border rounded-lg p-4">
+                    <div key={`${result.query}-${index}`} className="border rounded-lg p-4">
                       <h4 className="font-semibold mb-2">
                         Query: "{result.query}"
-                        <Badge variant="secondary" className="ml-2">{result.year}</Badge>
                       </h4>
                       {result.tracks.length > 0 ? (
                         <div className="grid gap-2">
@@ -608,9 +623,14 @@ const SpotifyPlaylistManager = () => {
                                 <div className="text-sm text-gray-600">
                                   {track.artists.map(a => a.name).join(', ')} • {track.album.name}
                                 </div>
-                                <div className="text-xs text-gray-500 flex items-center gap-1">
+                                <div className="text-xs text-gray-500 flex items-center gap-2">
                                   <Clock className="h-3 w-3" />
                                   {formatDuration(track.duration_ms)}
+                                  {track.foundYear && (
+                                    <Badge className={`ml-2 ${getYearColor(track.foundYear)}`}>
+                                      {track.foundYear}
+                                    </Badge>
+                                  )}
                                 </div>
                               </div>
                               <DropdownMenu>
@@ -644,7 +664,7 @@ const SpotifyPlaylistManager = () => {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-gray-500 italic">No matches found for {result.year}</div>
+                        <div className="text-gray-500 italic">No matches found</div>
                       )}
                     </div>
                   ))}
