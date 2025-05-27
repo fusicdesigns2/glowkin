@@ -18,67 +18,59 @@ serve(async (req) => {
       throw new Error('No queries provided')
     }
 
-    const lines = queries.split('\n').filter(line => line.trim())
-    const cleanedLines = lines.map(line => {
-      let cleaned = line.trim()
-      
-      // Remove numbering at the start "1.", "2.", etc.
-      cleaned = cleaned.replace(/^\d+\.?\s*/, '')
-      
-      // Remove price at end "$1.49"
-      cleaned = cleaned.replace(/\$\d+\.\d+\s*$/, '')
-      
-      // Remove release date "2025-02-28"
-      cleaned = cleaned.replace(/\d{4}-\d{2}-\d{2}\s*$/, '')
-      
-      // Remove BPM and key info "128 BPM - Ab Minor"
-      cleaned = cleaned.replace(/\d{2,3}\s*BPM\s*-\s*[A-G][b#]?\s*(Major|Minor|major|minor)\s*$/, '')
-      
-      // Remove genre info at the end if it's a single word
-      cleaned = cleaned.replace(/\s+(House|Tech House|Funky House|Progressive|Trance|Techno|Dance|Electronic)\s*$/, '')
-      
-      // Remove label info that appears after artist but before track
-      cleaned = cleaned.replace(/\n.*?(?=\n\d+|$)/g, '')
-      
-      // Handle multiline format where title is on one line, artist on another
-      const titleMatch = cleaned.match(/^(.+?)\s*\n(.+)/)
-      if (titleMatch) {
-        const title = titleMatch[1].trim()
-        const artist = titleMatch[2].trim()
-        cleaned = `${artist} – ${title}`
-      }
-      
-      // Look for remix/mix info and put it in brackets
-      const remixPatterns = [
-        /\b(Original|Extended|Radio|Club|Vocal|Instrumental|Dub|Acid|Deep|Tech|Progressive|Radio Edit|Club Mix|Vocal Mix|Dub Mix)\s*(Mix|Version|Edit)\b/gi,
-        /\b(Remix|Mix|Edit|Version|Bootleg|Rework|Flip)\b(?!\s*\])/gi
-      ]
-      
-      let remixInfo = ''
-      
-      remixPatterns.forEach(pattern => {
-        const matches = cleaned.match(pattern)
-        if (matches) {
-          remixInfo = matches[0]
-          cleaned = cleaned.replace(pattern, '').trim()
-        }
-      })
-      
-      // Clean up extra spaces and dashes
-      cleaned = cleaned.replace(/\s+/g, ' ').trim()
-      cleaned = cleaned.replace(/\s*–\s*$/, '').trim()
-      
-      // Add remix info in brackets if found
-      if (remixInfo) {
-        cleaned = `${cleaned} [${remixInfo}]`
-      }
-      
-      return cleaned
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY')
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not configured')
+    }
+
+    const systemPrompt = `You are a music track formatter. Your job is to clean up messy song listings and format them consistently.
+
+Rules:
+1. Format as: "Artist – Song Title [Remix Type]" (use en dash –)
+2. Remove all extra information like: prices, dates, BPM, keys, labels, catalog numbers, genre info
+3. If there's remix information, put it in square brackets [Original Mix], [Extended Mix], [Club Mix], etc.
+4. Remove numbering (1., 2., etc.)
+5. Clean up capitalization appropriately
+6. If artist and title are on separate lines, combine them
+7. Remove any extra metadata or formatting
+
+Examples:
+Input: "1. Shape of You Ed Sheeran Original Mix $1.49 2017-01-06"
+Output: "Ed Sheeran – Shape of You [Original Mix]"
+
+Input: "Blinding Lights\nThe Weeknd\nRadio Edit"
+Output: "The Weeknd – Blinding Lights [Radio Edit]"
+
+Clean up each line independently. Return only the cleaned song titles, one per line.`
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Clean up these song listings:\n\n${queries}` }
+        ],
+        temperature: 0.1,
+        max_tokens: 2000
+      }),
     })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
+    }
+
+    const data = await response.json()
+    const cleanedQueries = data.choices[0].message.content.trim()
 
     return new Response(JSON.stringify({
       success: true,
-      cleanedQueries: cleanedLines.join('\n')
+      cleanedQueries
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

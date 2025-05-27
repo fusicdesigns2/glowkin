@@ -195,8 +195,8 @@ const SpotifyPlaylistManager = () => {
 
       if (response.data?.success) {
         setSongQueries(response.data.cleanedQueries)
-        clearResults() // Reset years when cleaning up
-        toast.success('Song queries cleaned up!')
+        clearResults()
+        toast.success('Song queries cleaned up using AI!')
       } else {
         throw new Error(response.data?.error || 'Failed to clean up queries')
       }
@@ -414,19 +414,19 @@ const SpotifyPlaylistManager = () => {
 
   const getYearColor = (year: number) => {
     const colors = {
-      2025: 'bg-blue-100 text-blue-800',
-      2024: 'bg-green-100 text-green-800', 
-      2023: 'bg-purple-100 text-purple-800',
-      2022: 'bg-orange-100 text-orange-800',
-      2021: 'bg-red-100 text-red-800',
-      2020: 'bg-yellow-100 text-yellow-800',
-      2019: 'bg-pink-100 text-pink-800',
-      2018: 'bg-indigo-100 text-indigo-800',
-      2017: 'bg-gray-100 text-gray-800',
-      2016: 'bg-cyan-100 text-cyan-800',
-      2015: 'bg-lime-100 text-lime-800',
+      2025: 'bg-blue-100 text-blue-800 border-blue-200',
+      2024: 'bg-green-100 text-green-800 border-green-200', 
+      2023: 'bg-purple-100 text-purple-800 border-purple-200',
+      2022: 'bg-orange-100 text-orange-800 border-orange-200',
+      2021: 'bg-red-100 text-red-800 border-red-200',
+      2020: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      2019: 'bg-pink-100 text-pink-800 border-pink-200',
+      2018: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+      2017: 'bg-gray-100 text-gray-800 border-gray-200',
+      2016: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+      2015: 'bg-lime-100 text-lime-800 border-lime-200',
     }
-    return colors[year as keyof typeof colors] || 'bg-gray-100 text-gray-800'
+    return colors[year as keyof typeof colors] || 'bg-gray-100 text-gray-800 border-gray-200'
   }
 
   if (!user) {
@@ -505,12 +505,15 @@ const SpotifyPlaylistManager = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Enter song queries here, one per line&#10;Example:&#10;Shape of You Ed Sheeran&#10;Blinding Lights The Weeknd&#10;Watermelon Sugar Harry Styles"
-                value={songQueries}
-                onChange={(e) => setSongQueries(e.target.value)}
-                rows={6}
-              />
+              <div className="relative">
+                <Textarea
+                  placeholder="Enter song queries here, one per line&#10;Example:&#10;Shape of You Ed Sheeran&#10;Blinding Lights The Weeknd&#10;Watermelon Sugar Harry Styles"
+                  value={songQueries}
+                  onChange={(e) => setSongQueries(e.target.value)}
+                  rows={6}
+                  className="bg-black text-white placeholder:text-gray-400 border-gray-600"
+                />
+              </div>
               <div className="flex gap-2 flex-wrap">
                 <Button 
                   onClick={cleanUpQueries} 
@@ -525,7 +528,7 @@ const SpotifyPlaylistManager = () => {
                   ) : (
                     <>
                       <Sparkles className="mr-2 h-4 w-4" />
-                      Clean up
+                      AI Clean up
                     </>
                   )}
                 </Button>
@@ -627,7 +630,7 @@ const SpotifyPlaylistManager = () => {
                                   <Clock className="h-3 w-3" />
                                   {formatDuration(track.duration_ms)}
                                   {track.foundYear && (
-                                    <Badge className={`ml-2 ${getYearColor(track.foundYear)}`}>
+                                    <Badge variant="outline" className={`ml-2 ${getYearColor(track.foundYear)}`}>
                                       {track.foundYear}
                                     </Badge>
                                   )}
@@ -664,7 +667,9 @@ const SpotifyPlaylistManager = () => {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-gray-500 italic">No matches found</div>
+                        <div className="text-gray-300 italic text-center py-4 text-sm">
+                          No matches found
+                        </div>
                       )}
                     </div>
                   ))}
@@ -763,7 +768,8 @@ const SpotifyPlaylistManager = () => {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => navigate(`/playlist/${playlist.id}`)}
+                              onClick={() => navigate(`/playlist-detail/${playlist.id}`)}
+                              title="View playlist details"
                             >
                               <Eye className="h-3 w-3" />
                             </Button>
@@ -771,6 +777,7 @@ const SpotifyPlaylistManager = () => {
                               size="sm"
                               variant="ghost"
                               onClick={() => window.open(`https://open.spotify.com/playlist/${playlist.id}`, '_blank')}
+                              title="Open in Spotify"
                             >
                               <ExternalLink className="h-3 w-3" />
                             </Button>
