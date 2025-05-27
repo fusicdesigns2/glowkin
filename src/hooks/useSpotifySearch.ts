@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
@@ -28,56 +27,62 @@ export const useSpotifySearch = () => {
     return query.replace(/\s*\[.*?\]\s*/g, '').trim()
   }
 
-  const searchSongs = async (queries: string[], targetYear?: number) => {
-    const yearToSearch = targetYear || currentYear
+  const searchSongs = async (queries: string[], targetYears?: number[]) => {
+    const yearsToSearch = targetYears || [currentYear]
     setIsSearching(true)
     
     try {
-      const cleanQueries = queries.map(cleanQueryForSearch)
+      const allResults: SearchResult[] = []
       
-      const response = await supabase.functions.invoke('spotify-api', {
-        body: { 
-          action: 'search_songs', 
-          searchQueries: cleanQueries,
-          year: yearToSearch
+      for (const year of yearsToSearch) {
+        const cleanQueries = queries.map(cleanQueryForSearch)
+        
+        const response = await supabase.functions.invoke('spotify-api', {
+          body: { 
+            action: 'search_songs', 
+            searchQueries: cleanQueries,
+            year: year
+          }
+        })
+
+        if (response.data?.success) {
+          const yearResults = response.data.results.map((result: SearchResult) => ({
+            ...result,
+            query: queries[cleanQueries.indexOf(result.query)] || result.query,
+            year: year
+          }))
+          
+          allResults.push(...yearResults)
+        }
+      }
+      
+      // Add years to searched years
+      yearsToSearch.forEach(year => {
+        if (!searchedYears.includes(year)) {
+          setSearchedYears(prev => [...prev, year].sort((a, b) => b - a))
         }
       })
-
-      if (response.data?.success) {
-        const newResults = response.data.results.map((result: SearchResult) => ({
-          ...result,
-          query: queries[cleanQueries.indexOf(result.query)] || result.query // Use original query with brackets
-        }))
+      
+      // Merge with existing results, keeping all previous results
+      setSearchResults(prev => {
+        const merged = [...prev]
         
-        // Add year to searched years if not already there
-        if (!searchedYears.includes(yearToSearch)) {
-          setSearchedYears(prev => [...prev, yearToSearch].sort((a, b) => b - a))
-        }
-        
-        // Merge with existing results
-        setSearchResults(prev => {
-          const merged = [...prev]
-          
-          newResults.forEach((newResult: SearchResult) => {
-            const existingIndex = merged.findIndex(r => r.query === newResult.query && r.year === newResult.year)
-            if (existingIndex >= 0) {
-              // Replace existing result for same query and year
-              merged[existingIndex] = newResult
-            } else {
-              merged.push(newResult)
-            }
-          })
-          
-          return merged
+        allResults.forEach((newResult: SearchResult) => {
+          const existingIndex = merged.findIndex(r => r.query === newResult.query && r.year === newResult.year)
+          if (existingIndex >= 0) {
+            merged[existingIndex] = newResult
+          } else {
+            merged.push(newResult)
+          }
         })
         
-        const foundCount = newResults.filter((r: SearchResult) => r.tracks.length > 0).length
-        toast.success(`Found matches for ${foundCount}/${queries.length} songs in ${yearToSearch}`)
-        
-        return newResults
-      } else {
-        throw new Error(response.data?.error || 'Search failed')
-      }
+        return merged
+      })
+      
+      const foundCount = allResults.filter((r: SearchResult) => r.tracks.length > 0).length
+      toast.success(`Found matches for ${foundCount}/${queries.length * yearsToSearch.length} searches`)
+      
+      return allResults
     } catch (error) {
       console.error('Error searching songs:', error)
       toast.error('Failed to search for songs')
@@ -89,12 +94,16 @@ export const useSpotifySearch = () => {
 
   const searchYear = async (year: number, queries: string[]) => {
     setCurrentYear(year)
-    return await searchSongs(queries, year)
+    return await searchSongs(queries, [year])
+  }
+
+  const searchMultipleYears = async (years: number[], queries: string[]) => {
+    return await searchSongs(queries, years)
   }
 
   const clearResults = () => {
     setSearchResults([])
-    setSearchedYears([new Date().getFullYear()])
+    setSearchedYears([])
     setCurrentYear(new Date().getFullYear())
   }
 
@@ -105,6 +114,7 @@ export const useSpotifySearch = () => {
     isSearching,
     searchSongs,
     searchYear,
+    searchMultipleYears,
     clearResults
   }
 }

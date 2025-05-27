@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Loader2, Music, Search, Plus, Play, Clock, ChevronDown, Sparkles, ExternalLink } from 'lucide-react'
+import { Loader2, Music, Search, Plus, Play, Clock, ChevronDown, Sparkles, ExternalLink, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useNavigate } from 'react-router-dom'
@@ -18,7 +18,7 @@ const SpotifyPlaylistManager = () => {
   const { user } = useAuth()
   const { spotifyUser, hasValidToken, isLoading: authLoading, initiateSpotifyAuth } = useSpotifyAuth()
   const { playlists, selectedPlaylists, isLoading: playlistsLoading, fetchPlaylists, togglePlaylistSelection, updatePlaylist } = useSpotifyPlaylists()
-  const { searchResults, searchedYears, currentYear, isSearching, searchSongs, searchYear, clearResults } = useSpotifySearch()
+  const { searchResults, searchedYears, currentYear, isSearching, searchSongs, searchYear, searchMultipleYears, clearResults } = useSpotifySearch()
   
   const [songQueries, setSongQueries] = useState('')
   const [playlistSongs, setPlaylistSongs] = useState<{ [playlistId: string]: any[] }>({})
@@ -215,7 +215,8 @@ const SpotifyPlaylistManager = () => {
       return
     }
 
-    await searchSongs(queries)
+    // Initial search for recent years (2025-2023)
+    await searchMultipleYears([2025, 2024, 2023], queries)
   }
 
   const handleYearClick = async (year: number) => {
@@ -228,8 +229,27 @@ const SpotifyPlaylistManager = () => {
     await searchYear(year, queries)
   }
 
+  const handleYearRangeClick = async (years: number[]) => {
+    const queries = songQueries.split('\n').filter(q => q.trim()).slice(0, 25)
+    if (queries.length === 0) {
+      toast.error('Please enter song queries first')
+      return
+    }
+
+    await searchMultipleYears(years, queries)
+  }
+
   const addSongToPlaylist = async (track: any, playlistId: string) => {
     try {
+      // Check if song already exists in this playlist
+      const existingSongs = playlistSongs[playlistId] || []
+      const isDuplicate = existingSongs.some(song => song.spotify_track_id === track.id)
+      
+      if (isDuplicate) {
+        toast.error('This song is already in the playlist')
+        return
+      }
+
       // Check if song exists (including removed ones) and restore if needed
       const { data: existingSong } = await supabase
         .from('playlist_songs')
@@ -250,6 +270,9 @@ const SpotifyPlaylistManager = () => {
               search_year: currentYear 
             })
             .eq('id', existingSong.id)
+        } else {
+          toast.error('This song is already in the playlist')
+          return
         }
       } else {
         // Create new song entry
@@ -461,7 +484,7 @@ const SpotifyPlaylistManager = () => {
                 Search Songs
               </CardTitle>
               <CardDescription>
-                Enter up to 25 song queries (one per line). Search starts from {currentYear}.
+                Enter up to 25 song queries (one per line). Initial search covers 2025-2023.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -494,55 +517,60 @@ const SpotifyPlaylistManager = () => {
                   {isSearching ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Searching {currentYear}...
+                      Searching...
                     </>
                   ) : (
                     <>
                       <Search className="mr-2 h-4 w-4" />
-                      Search {currentYear}
+                      Search 2025-2023
                     </>
                   )}
                 </Button>
               </div>
 
-              {/* Year Selection */}
-              {searchedYears.length > 0 && (
-                <div className="flex gap-2 flex-wrap items-center">
-                  <span className="text-sm font-medium">Years:</span>
-                  {searchedYears.map(year => (
-                    <Button
-                      key={year}
-                      variant={year === currentYear ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleYearClick(year)}
-                      disabled={isSearching}
-                    >
-                      {year}
-                    </Button>
-                  ))}
-                  {/* Add buttons for additional years */}
-                  {!searchedYears.includes(currentYear - 1) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleYearClick(currentYear - 1)}
-                      disabled={isSearching}
-                    >
-                      {currentYear - 1}
-                    </Button>
-                  )}
-                  {!searchedYears.includes(currentYear - 2) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleYearClick(currentYear - 2)}
-                      disabled={isSearching}
-                    >
-                      {currentYear - 2}
-                    </Button>
-                  )}
-                </div>
-              )}
+              {/* Year Selection - Always Visible */}
+              <div className="flex gap-2 flex-wrap items-center">
+                <span className="text-sm font-medium">Years:</span>
+                
+                {/* Individual years */}
+                {[2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015].map(year => (
+                  <Button
+                    key={year}
+                    variant={searchedYears.includes(year) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleYearClick(year)}
+                    disabled={isSearching}
+                  >
+                    {year}
+                  </Button>
+                ))}
+                
+                {/* Year range buttons */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleYearRangeClick([2022, 2021, 2020])}
+                  disabled={isSearching}
+                >
+                  2022-2020
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleYearRangeClick([2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010])}
+                  disabled={isSearching}
+                >
+                  2019-2010
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleYearRangeClick([2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010])}
+                  disabled={isSearching}
+                >
+                  All Years
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -565,10 +593,12 @@ const SpotifyPlaylistManager = () => {
                       </h4>
                       {result.tracks.length > 0 ? (
                         <div className="grid gap-2">
-                          {result.tracks.map((track) => (
+                          {result.tracks.map((track, trackIndex) => (
                             <div 
                               key={track.id} 
-                              className="flex items-center justify-between p-2 border rounded cursor-move hover:bg-gray-50 transition-colors"
+                              className={`flex items-center justify-between p-2 border rounded cursor-move hover:bg-gray-50 transition-colors ${
+                                trackIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'
+                              }`}
                               draggable
                               onDragStart={(e) => handleDragStart(e, track)}
                             >
@@ -688,80 +718,87 @@ const SpotifyPlaylistManager = () => {
                       </>
                     )}
                   </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {sortedSelectedPlaylists.map(playlist => {
-                    if (!playlist) return null
-                    const songs = playlistSongs[playlist.id] || []
-                    
-                    return (
-                      <div 
-                        key={playlist.id} 
-                        className="border-2 border-dashed border-gray-200 rounded-lg p-3 transition-colors hover:border-blue-300"
-                        onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, playlist.id)}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold truncate">{playlist.name}</h4>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">
-                              {songs.length}/100
-                            </Badge>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => window.open(`https://open.spotify.com/playlist/${playlist.id}`, '_blank')}
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {sortedSelectedPlaylists.map(playlist => {
+                      if (!playlist) return null
+                      const songs = playlistSongs[playlist.id] || []
+                      
+                      return (
+                        <div 
+                          key={playlist.id} 
+                          className="border-2 border-dashed border-gray-200 rounded-lg p-3 transition-colors hover:border-blue-300"
+                          onDragOver={handleDragOver}
+                          onDrop={(e) => handleDrop(e, playlist.id)}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-semibold truncate">{playlist.name}</h4>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">
+                                {songs.length}/100
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => navigate(`/playlist/${playlist.id}`)}
+                              >
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => window.open(`https://open.spotify.com/playlist/${playlist.id}`, '_blank')}
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                        
-                        <div className="text-xs text-gray-500 mb-2">
-                          {songs.length > 0 && `Last updated: ${new Date(songs[0].added_to_app_at).toLocaleDateString()}`}
-                        </div>
-                        
-                        {songs.length > 0 ? (
-                          <div className="space-y-1 max-h-40 overflow-y-auto">
-                            {songs.slice(0, 5).map((song, index) => (
-                              <div key={song.id} className="text-xs flex items-center justify-between p-1 bg-gray-50 rounded">
-                                <div className="truncate">
-                                  <span className="font-medium">{song.track_name}</span>
-                                  <span className="text-gray-500"> • {song.artist_name}</span>
+                          
+                          <div className="text-xs text-gray-500 mb-2">
+                            {songs.length > 0 && `Last updated: ${new Date(songs[0].added_to_app_at).toLocaleDateString()}`}
+                          </div>
+                          
+                          {songs.length > 0 ? (
+                            <div className="space-y-1 max-h-40 overflow-y-auto">
+                              {songs.slice(0, 5).map((song, index) => (
+                                <div key={song.id} className="text-xs flex items-center justify-between p-1 bg-gray-50 rounded">
+                                  <div className="truncate">
+                                    <span className="font-medium">{song.track_name}</span>
+                                    <span className="text-gray-500"> • {song.artist_name}</span>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-4 w-4 p-0 text-gray-400 hover:text-red-500"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      removeSongFromPlaylist(song.spotify_track_id, playlist.id)
+                                    }}
+                                  >
+                                    ✕
+                                  </Button>
                                 </div>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-4 w-4 p-0 text-gray-400 hover:text-red-500"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    removeSongFromPlaylist(song.spotify_track_id, playlist.id)
-                                  }}
-                                >
-                                  ✕
-                                </Button>
-                              </div>
-                            ))}
-                            {songs.length > 5 && (
-                              <div className="text-xs text-gray-500 text-center py-1">
-                                +{songs.length - 5} more songs
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-gray-500 italic text-center py-4 text-xs border-2 border-dashed border-gray-200 rounded bg-gray-50">
-                            Drop songs here or use the dropdown menu
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                              ))}
+                              {songs.length > 5 && (
+                                <div className="text-xs text-gray-500 text-center py-1">
+                                  +{songs.length - 5} more songs
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-gray-500 italic text-center py-4 text-xs border-2 border-dashed border-gray-200 rounded bg-gray-50">
+                              Drop songs here or use the dropdown menu
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>
