@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSpotifyAuth } from '@/hooks/useSpotifyAuth'
@@ -547,7 +548,7 @@ const SpotifyPlaylistManager = () => {
                 
                 {/* Year range buttons */}
                 <Button
-                  variant="outline"
+                  variant={searchedYears.some(year => [2022, 2021, 2020].includes(year)) ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleYearRangeClick([2022, 2021, 2020])}
                   disabled={isSearching}
@@ -555,7 +556,7 @@ const SpotifyPlaylistManager = () => {
                   2022-2020
                 </Button>
                 <Button
-                  variant="outline"
+                  variant={searchedYears.some(year => [2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010].includes(year)) ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleYearRangeClick([2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010])}
                   disabled={isSearching}
@@ -563,7 +564,7 @@ const SpotifyPlaylistManager = () => {
                   2019-2010
                 </Button>
                 <Button
-                  variant="outline"
+                  variant={searchedYears.length >= 16 ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleYearRangeClick([2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010])}
                   disabled={isSearching}
@@ -718,87 +719,87 @@ const SpotifyPlaylistManager = () => {
                       </>
                     )}
                   </Button>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {sortedSelectedPlaylists.map(playlist => {
-                      if (!playlist) return null
-                      const songs = playlistSongs[playlist.id] || []
-                      
-                      return (
-                        <div 
-                          key={playlist.id} 
-                          className="border-2 border-dashed border-gray-200 rounded-lg p-3 transition-colors hover:border-blue-300"
-                          onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(e, playlist.id)}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-semibold truncate">{playlist.name}</h4>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">
-                                {songs.length}/100
-                              </Badge>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => navigate(`/playlist/${playlist.id}`)}
-                              >
-                                <Eye className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => window.open(`https://open.spotify.com/playlist/${playlist.id}`, '_blank')}
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                              </Button>
-                            </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {sortedSelectedPlaylists.map(playlist => {
+                    if (!playlist) return null
+                    const songs = playlistSongs[playlist.id] || []
+                    
+                    return (
+                      <div 
+                        key={playlist.id} 
+                        className="border-2 border-dashed border-gray-200 rounded-lg p-3 transition-colors hover:border-blue-300"
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, playlist.id)}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold truncate">{playlist.name}</h4>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">
+                              {songs.length}/100
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => navigate(`/playlist/${playlist.id}`)}
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => window.open(`https://open.spotify.com/playlist/${playlist.id}`, '_blank')}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
                           </div>
-                          
-                          <div className="text-xs text-gray-500 mb-2">
-                            {songs.length > 0 && `Last updated: ${new Date(songs[0].added_to_app_at).toLocaleDateString()}`}
-                          </div>
-                          
-                          {songs.length > 0 ? (
-                            <div className="space-y-1 max-h-40 overflow-y-auto">
-                              {songs.slice(0, 5).map((song, index) => (
-                                <div key={song.id} className="text-xs flex items-center justify-between p-1 bg-gray-50 rounded">
-                                  <div className="truncate">
-                                    <span className="font-medium">{song.track_name}</span>
-                                    <span className="text-gray-500"> • {song.artist_name}</span>
-                                  </div>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-4 w-4 p-0 text-gray-400 hover:text-red-500"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      removeSongFromPlaylist(song.spotify_track_id, playlist.id)
-                                    }}
-                                  >
-                                    ✕
-                                  </Button>
-                                </div>
-                              ))}
-                              {songs.length > 5 && (
-                                <div className="text-xs text-gray-500 text-center py-1">
-                                  +{songs.length - 5} more songs
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="text-gray-500 italic text-center py-4 text-xs border-2 border-dashed border-gray-200 rounded bg-gray-50">
-                              Drop songs here or use the dropdown menu
-                            </div>
-                          )}
                         </div>
-                      )
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                        
+                        <div className="text-xs text-gray-500 mb-2">
+                          {songs.length > 0 && `Last updated: ${new Date(songs[0].added_to_app_at).toLocaleDateString()}`}
+                        </div>
+                        
+                        {songs.length > 0 ? (
+                          <div className="space-y-1 max-h-40 overflow-y-auto">
+                            {songs.slice(0, 5).map((song, index) => (
+                              <div key={song.id} className="text-xs flex items-center justify-between p-1 bg-gray-50 rounded">
+                                <div className="truncate">
+                                  <span className="font-medium">{song.track_name}</span>
+                                  <span className="text-gray-500"> • {song.artist_name}</span>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-4 w-4 p-0 text-gray-400 hover:text-red-500"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    removeSongFromPlaylist(song.spotify_track_id, playlist.id)
+                                  }}
+                                >
+                                  ✕
+                                </Button>
+                              </div>
+                            ))}
+                            {songs.length > 5 && (
+                              <div className="text-xs text-gray-500 text-center py-1">
+                                +{songs.length - 5} more songs
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-gray-500 italic text-center py-4 text-xs border-2 border-dashed border-gray-200 rounded bg-gray-50">
+                            Drop songs here or use the dropdown menu
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
