@@ -485,16 +485,16 @@ const SpotifyPlaylistManager = () => {
 
           {/* Search Results */}
           {searchResults.length > 0 && <Card>
-              <CardHeader>
-                <CardTitle>Search Results</CardTitle>
-                <CardDescription>
+              <CardHeader className="bg-zinc-900">
+                <CardTitle className="text-zinc-50">Search Results</CardTitle>
+                <CardDescription className="text-zinc-50">
                   Drag songs to playlists on the right or use the dropdown menu to add them
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="bg-zinc-950">
                 <div className="space-y-4">
                   {searchResults.map((result, index) => <div key={`${result.query}-${index}`} className="border rounded-lg p-4">
-                      <h4 className="font-semibold mb-2">
+                      <h4 className="font-semibold mb-2 text-amber-100">
                         Query: "{result.query}"
                       </h4>
                       {result.tracks.length > 0 ? <div className="grid gap-2">
