@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -111,13 +110,13 @@ serve(async (req) => {
       
       for (const searchQuery of searchQueries) {
         const queryParam = encodeURIComponent(`${searchQuery} year:${year}`)
-        const response = await makeSpotifyRequest(`https://api.spotify.com/v1/search?q=${queryParam}&type=track&limit=10`)
+        const response = await makeSpotifyRequest(`https://api.spotify.com/v1/search?q=${queryParam}&type=track&limit=25`)
         const data = await response.json()
         
         if (response.ok && data.tracks.items.length > 0) {
           results.push({
             query: searchQuery,
-            tracks: data.tracks.items.slice(0, 3), // Limit to top 3 results per query
+            tracks: data.tracks.items.slice(0, 5), // Limit to top 5 results per query
             year
           })
         } else {

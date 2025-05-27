@@ -19,27 +19,62 @@ interface SearchResult {
 
 export const useSpotifySearch = () => {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [searchedYears, setSearchedYears] = useState<number[]>([])
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [isSearching, setIsSearching] = useState(false)
 
-  const searchSongs = async (queries: string[]) => {
+  const cleanQueryForSearch = (query: string) => {
+    // Remove brackets and their contents for searching
+    return query.replace(/\s*\[.*?\]\s*/g, '').trim()
+  }
+
+  const searchSongs = async (queries: string[], targetYear?: number) => {
+    const yearToSearch = targetYear || currentYear
     setIsSearching(true)
+    
     try {
+      const cleanQueries = queries.map(cleanQueryForSearch)
+      
       const response = await supabase.functions.invoke('spotify-api', {
         body: { 
           action: 'search_songs', 
-          searchQueries: queries,
-          year: currentYear
+          searchQueries: cleanQueries,
+          year: yearToSearch
         }
       })
 
       if (response.data?.success) {
-        setSearchResults(response.data.results)
+        const newResults = response.data.results.map((result: SearchResult) => ({
+          ...result,
+          query: queries[cleanQueries.indexOf(result.query)] || result.query // Use original query with brackets
+        }))
         
-        const foundCount = response.data.results.filter((r: SearchResult) => r.tracks.length > 0).length
-        toast.success(`Found matches for ${foundCount}/${queries.length} songs in ${currentYear}`)
+        // Add year to searched years if not already there
+        if (!searchedYears.includes(yearToSearch)) {
+          setSearchedYears(prev => [...prev, yearToSearch].sort((a, b) => b - a))
+        }
         
-        return response.data.results
+        // Merge with existing results
+        setSearchResults(prev => {
+          const merged = [...prev]
+          
+          newResults.forEach((newResult: SearchResult) => {
+            const existingIndex = merged.findIndex(r => r.query === newResult.query && r.year === newResult.year)
+            if (existingIndex >= 0) {
+              // Replace existing result for same query and year
+              merged[existingIndex] = newResult
+            } else {
+              merged.push(newResult)
+            }
+          })
+          
+          return merged
+        })
+        
+        const foundCount = newResults.filter((r: SearchResult) => r.tracks.length > 0).length
+        toast.success(`Found matches for ${foundCount}/${queries.length} songs in ${yearToSearch}`)
+        
+        return newResults
       } else {
         throw new Error(response.data?.error || 'Search failed')
       }
@@ -52,47 +87,24 @@ export const useSpotifySearch = () => {
     }
   }
 
-  const searchPreviousYear = async (queries: string[]) => {
-    const newYear = currentYear - 1
-    setCurrentYear(newYear)
-    
-    const newResults = await searchSongs(queries)
-    
-    // Merge with existing results, avoiding duplicates
-    setSearchResults(prev => {
-      const merged = [...prev]
-      
-      newResults.forEach((newResult: SearchResult) => {
-        const existingIndex = merged.findIndex(r => r.query === newResult.query)
-        if (existingIndex >= 0) {
-          // Add tracks from new year to existing query results
-          const existingTracks = merged[existingIndex].tracks
-          const newTracks = newResult.tracks.filter(
-            track => !existingTracks.some(existing => existing.id === track.id)
-          )
-          merged[existingIndex].tracks = [...existingTracks, ...newTracks]
-        } else {
-          merged.push(newResult)
-        }
-      })
-      
-      return merged
-    })
-    
-    return newResults
+  const searchYear = async (year: number, queries: string[]) => {
+    setCurrentYear(year)
+    return await searchSongs(queries, year)
   }
 
   const clearResults = () => {
     setSearchResults([])
+    setSearchedYears([new Date().getFullYear()])
     setCurrentYear(new Date().getFullYear())
   }
 
   return {
     searchResults,
+    searchedYears,
     currentYear,
     isSearching,
     searchSongs,
-    searchPreviousYear,
+    searchYear,
     clearResults
   }
 }

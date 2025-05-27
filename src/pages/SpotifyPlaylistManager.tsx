@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSpotifyAuth } from '@/hooks/useSpotifyAuth'
@@ -19,7 +18,7 @@ const SpotifyPlaylistManager = () => {
   const { user } = useAuth()
   const { spotifyUser, hasValidToken, isLoading: authLoading, initiateSpotifyAuth } = useSpotifyAuth()
   const { playlists, selectedPlaylists, isLoading: playlistsLoading, fetchPlaylists, togglePlaylistSelection, updatePlaylist } = useSpotifyPlaylists()
-  const { searchResults, currentYear, isSearching, searchSongs, searchPreviousYear, clearResults } = useSpotifySearch()
+  const { searchResults, searchedYears, currentYear, isSearching, searchSongs, searchYear, clearResults } = useSpotifySearch()
   
   const [songQueries, setSongQueries] = useState('')
   const [playlistSongs, setPlaylistSongs] = useState<{ [playlistId: string]: any[] }>({})
@@ -196,6 +195,7 @@ const SpotifyPlaylistManager = () => {
 
       if (response.data?.success) {
         setSongQueries(response.data.cleanedQueries)
+        clearResults() // Reset years when cleaning up
         toast.success('Song queries cleaned up!')
       } else {
         throw new Error(response.data?.error || 'Failed to clean up queries')
@@ -209,19 +209,23 @@ const SpotifyPlaylistManager = () => {
   }
 
   const handleSearch = async () => {
-    const queries = songQueries.split('\n').filter(q => q.trim()).slice(0, 10)
+    const queries = songQueries.split('\n').filter(q => q.trim()).slice(0, 25)
     if (queries.length === 0) {
       toast.error('Please enter at least one song query')
       return
     }
 
-    clearResults()
     await searchSongs(queries)
   }
 
-  const handleSearchPreviousYear = async () => {
-    const queries = songQueries.split('\n').filter(q => q.trim()).slice(0, 10)
-    await searchPreviousYear(queries)
+  const handleYearClick = async (year: number) => {
+    const queries = songQueries.split('\n').filter(q => q.trim()).slice(0, 25)
+    if (queries.length === 0) {
+      toast.error('Please enter song queries first')
+      return
+    }
+
+    await searchYear(year, queries)
   }
 
   const addSongToPlaylist = async (track: any, playlistId: string) => {
@@ -457,7 +461,7 @@ const SpotifyPlaylistManager = () => {
                 Search Songs
               </CardTitle>
               <CardDescription>
-                Enter up to 10 song queries (one per line). Search starts from {currentYear}.
+                Enter up to 25 song queries (one per line). Search starts from {currentYear}.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -499,17 +503,46 @@ const SpotifyPlaylistManager = () => {
                     </>
                   )}
                 </Button>
-                
-                {searchResults.length > 0 && (
-                  <Button 
-                    variant="outline" 
-                    onClick={handleSearchPreviousYear}
-                    disabled={isSearching}
-                  >
-                    Search {currentYear - 1}
-                  </Button>
-                )}
               </div>
+
+              {/* Year Selection */}
+              {searchedYears.length > 0 && (
+                <div className="flex gap-2 flex-wrap items-center">
+                  <span className="text-sm font-medium">Years:</span>
+                  {searchedYears.map(year => (
+                    <Button
+                      key={year}
+                      variant={year === currentYear ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleYearClick(year)}
+                      disabled={isSearching}
+                    >
+                      {year}
+                    </Button>
+                  ))}
+                  {/* Add buttons for additional years */}
+                  {!searchedYears.includes(currentYear - 1) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleYearClick(currentYear - 1)}
+                      disabled={isSearching}
+                    >
+                      {currentYear - 1}
+                    </Button>
+                  )}
+                  {!searchedYears.includes(currentYear - 2) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleYearClick(currentYear - 2)}
+                      disabled={isSearching}
+                    >
+                      {currentYear - 2}
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -525,7 +558,7 @@ const SpotifyPlaylistManager = () => {
               <CardContent>
                 <div className="space-y-4">
                   {searchResults.map((result, index) => (
-                    <div key={index} className="border rounded-lg p-4">
+                    <div key={`${result.query}-${result.year}-${index}`} className="border rounded-lg p-4">
                       <h4 className="font-semibold mb-2">
                         Query: "{result.query}"
                         <Badge variant="secondary" className="ml-2">{result.year}</Badge>
@@ -631,8 +664,8 @@ const SpotifyPlaylistManager = () => {
           </Card>
         </div>
 
-        {/* Right Column - Selected Playlists */}
-        <div className="space-y-6">
+        {/* Right Column - Selected Playlists (Sticky) */}
+        <div className="space-y-6 lg:sticky lg:top-4 lg:h-screen lg:overflow-y-auto">
           {selectedPlaylists.length > 0 && (
             <Card>
               <CardHeader>
@@ -679,7 +712,7 @@ const SpotifyPlaylistManager = () => {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => navigate(`/playlist/${playlist.id}`)}
+                              onClick={() => window.open(`https://open.spotify.com/playlist/${playlist.id}`, '_blank')}
                             >
                               <ExternalLink className="h-3 w-3" />
                             </Button>
