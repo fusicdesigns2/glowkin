@@ -436,7 +436,7 @@ const SpotifyPlaylistManager = () => {
             </CardHeader>
             <CardContent className="space-y-4 bg-zinc-900">
               <div className="relative">
-                <Textarea placeholder="Enter song queries here, one per line&#10;Example:&#10;Shape of You Ed Sheeran&#10;Blinding Lights The Weeknd&#10;Watermelon Sugar Harry Styles" value={songQueries} onChange={e => setSongQueries(e.target.value)} rows={6} className="text-white placeholder:text-gray-400 border-gray-600 bg-zinc-50" />
+                <Textarea placeholder="Enter song queries here, one per line&#10;Example:&#10;Shape of You Ed Sheeran&#10;Blinding Lights The Weeknd&#10;Watermelon Sugar Harry Styles" value={songQueries} onChange={e => setSongQueries(e.target.value)} rows={6} className="text-white placeholder:text-gray-400 border-gray-600 bg-zinc-800" />
               </div>
               <div className="flex gap-2 flex-wrap">
                 <Button onClick={cleanUpQueries} disabled={isCleaningUp} variant="outline">
