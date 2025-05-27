@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -82,6 +83,22 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         success: true,
         playlists: data.items
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (action === 'get_playlist_details') {
+      const response = await makeSpotifyRequest(`https://api.spotify.com/v1/playlists/${playlistId}`)
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Failed to fetch playlist details')
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        playlist: data
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })

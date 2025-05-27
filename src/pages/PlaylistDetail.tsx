@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
@@ -14,7 +13,7 @@ const PlaylistDetail = () => {
   const { playlistId } = useParams<{ playlistId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { playlists, updatePlaylist } = useSpotifyPlaylists()
+  const { updatePlaylist } = useSpotifyPlaylists()
   
   const [playlist, setPlaylist] = useState<any>(null)
   const [songs, setSongs] = useState<any[]>([])
@@ -32,16 +31,28 @@ const PlaylistDetail = () => {
   const loadPlaylistData = async () => {
     setIsLoading(true)
     try {
-      // Find playlist info
-      const playlistInfo = playlists.find(p => p.id === playlistId)
-      setPlaylist(playlistInfo)
+      // Get playlist info from our database using the internal ID
+      const { data: playlistData } = await supabase
+        .from('spotify_playlists')
+        .select('*')
+        .eq('id', playlistId)
+        .eq('user_id', user?.id)
+        .single()
+
+      if (!playlistData) {
+        toast.error('Playlist not found')
+        navigate('/spotify-playlists')
+        return
+      }
+
+      setPlaylist(playlistData)
 
       // Load active songs for this playlist
       const { data: activeSongs } = await supabase
         .from('playlist_songs')
         .select('*')
         .eq('user_id', user?.id)
-        .eq('spotify_playlist_id', playlistId)
+        .eq('spotify_playlist_id', playlistData.spotify_playlist_id)
         .is('removed_at', null)
         .order('added_to_app_at', { ascending: false })
 
@@ -54,7 +65,7 @@ const PlaylistDetail = () => {
         .from('playlist_songs')
         .select('*')
         .eq('user_id', user?.id)
-        .eq('spotify_playlist_id', playlistId)
+        .eq('spotify_playlist_id', playlistData.spotify_playlist_id)
         .not('removed_at', 'is', null)
         .order('removed_at', { ascending: false })
 
@@ -75,7 +86,7 @@ const PlaylistDetail = () => {
         .from('playlist_songs')
         .update({ removed_at: new Date().toISOString() })
         .eq('user_id', user?.id)
-        .eq('spotify_playlist_id', playlistId)
+        .eq('spotify_playlist_id', playlist.spotify_playlist_id)
         .eq('spotify_track_id', trackId)
 
       await loadPlaylistData()
@@ -95,7 +106,7 @@ const PlaylistDetail = () => {
           added_to_app_at: new Date().toISOString()
         })
         .eq('user_id', user?.id)
-        .eq('spotify_playlist_id', playlistId)
+        .eq('spotify_playlist_id', playlist.spotify_playlist_id)
         .eq('spotify_track_id', trackId)
 
       await loadPlaylistData()
@@ -107,7 +118,7 @@ const PlaylistDetail = () => {
   }
 
   const handleUpdatePlaylist = async () => {
-    if (!playlistId) return
+    if (!playlist) return
     
     setIsUpdating(true)
     try {
@@ -115,7 +126,7 @@ const PlaylistDetail = () => {
       const trackIds = songs.slice(0, 100).map(song => song.spotify_track_id)
       
       if (trackIds.length > 0) {
-        await updatePlaylist(playlistId, trackIds)
+        await updatePlaylist(playlist.spotify_playlist_id, trackIds)
         
         // Remove excess songs from database if we had more than 100
         if (songs.length > 100) {
@@ -125,7 +136,7 @@ const PlaylistDetail = () => {
               .from('playlist_songs')
               .update({ removed_at: new Date().toISOString() })
               .eq('user_id', user?.id)
-              .eq('spotify_playlist_id', playlistId)
+              .eq('spotify_playlist_id', playlist.spotify_playlist_id)
               .eq('spotify_track_id', song.spotify_track_id)
           }
           
@@ -145,7 +156,7 @@ const PlaylistDetail = () => {
   }
 
   const handleRemoveAndSend = async () => {
-    if (!playlistId) return
+    if (!playlist) return
     
     setIsRemoving(true)
     try {
@@ -157,7 +168,7 @@ const PlaylistDetail = () => {
           .from('playlist_songs')
           .delete()
           .eq('user_id', user?.id)
-          .eq('spotify_playlist_id', playlistId)
+          .eq('spotify_playlist_id', playlist.spotify_playlist_id)
           .in('spotify_track_id', removedTrackIds)
       }
 
@@ -165,7 +176,7 @@ const PlaylistDetail = () => {
       const trackIds = songs.slice(0, 100).map(song => song.spotify_track_id)
       
       if (trackIds.length > 0) {
-        await updatePlaylist(playlistId, trackIds)
+        await updatePlaylist(playlist.spotify_playlist_id, trackIds)
         
         // Handle excess songs
         if (songs.length > 100) {
@@ -175,7 +186,7 @@ const PlaylistDetail = () => {
               .from('playlist_songs')
               .update({ removed_at: new Date().toISOString() })
               .eq('user_id', user?.id)
-              .eq('spotify_playlist_id', playlistId)
+              .eq('spotify_playlist_id', playlist.spotify_playlist_id)
               .eq('spotify_track_id', song.spotify_track_id)
           }
         }
@@ -243,7 +254,7 @@ const PlaylistDetail = () => {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Music className="h-6 w-6" />
-                  {playlist.name}
+                  {playlist.playlist_name}
                 </CardTitle>
                 <CardDescription>
                   {songs.length} active songs • {removedSongs.length} removed songs
