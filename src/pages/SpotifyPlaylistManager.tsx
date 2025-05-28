@@ -31,6 +31,12 @@ const SpotifyPlaylistManager = () => {
   const [draggedTrack, setDraggedTrack] = useState<any>(null);
   const [playlistDetails, setPlaylistDetails] = useState<{ [playlistId: string]: any }>({});
 
+  // Create sortedSelectedPlaylists from selectedPlaylists
+  const sortedSelectedPlaylists = selectedPlaylists
+    .map(id => playlists.find(p => p.id === id))
+    .filter(Boolean)
+    .sort((a, b) => a!.name.localeCompare(b!.name));
+
   useEffect(() => {
     if (hasValidToken && playlists.length === 0) {
       fetchPlaylists();
@@ -416,11 +422,23 @@ const SpotifyPlaylistManager = () => {
 
       const newPlaylistName = `${sourcePlaylist.name} (Copy)`;
       
+      // Get Spotify access token from database
+      const { data: tokenData } = await supabase
+        .from('spotify_tokens')
+        .select('access_token')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (!tokenData) {
+        toast.error('No Spotify token found');
+        return;
+      }
+      
       // Create new playlist on Spotify
       const response = await fetch('https://api.spotify.com/v1/me/playlists', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${spotifyUser?.access_token}`,
+          'Authorization': `Bearer ${tokenData.access_token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
