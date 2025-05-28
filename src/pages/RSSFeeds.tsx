@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Loader2, RefreshCw, Trash2, Edit } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { RSSFieldMapper } from '@/components/RSSFieldMapper';
 
 interface FeedDetail {
   id: string;
@@ -31,7 +30,7 @@ export default function RSSFeeds() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFeed, setEditingFeed] = useState<FeedDetail | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -82,7 +81,7 @@ export default function RSSFeeds() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feeds'] });
-      setIsDialogOpen(false);
+      setDialogOpen(false);
       setFormData({
         name: '',
         feed_url: '',
@@ -126,7 +125,7 @@ export default function RSSFeeds() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feeds'] });
-      setIsDialogOpen(false);
+      setDialogOpen(false);
       setEditingFeed(null);
       setFormData({
         name: '',
@@ -229,6 +228,16 @@ export default function RSSFeeds() {
     }
   });
 
+  const handleFieldMappingGenerated = (mapping: any) => {
+    setFormData(prev => ({
+      ...prev,
+      pub_date: mapping.pubDate || '',
+      pub_thumb_image: mapping.pubThumbImage || '',
+      pub_content: mapping.pubContent || '',
+      pub_media: mapping.pubMedia || ''
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingFeed) {
@@ -248,11 +257,11 @@ export default function RSSFeeds() {
       pub_content: feed.pub_content || '',
       pub_media: feed.pub_media || ''
     });
-    setIsDialogOpen(true);
+    setDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
-    setIsDialogOpen(false);
+    setDialogOpen(false);
     setEditingFeed(null);
     setFormData({
       name: '',
@@ -262,6 +271,19 @@ export default function RSSFeeds() {
       pub_content: '',
       pub_media: ''
     });
+  };
+
+  const handleAddFeedClick = () => {
+    setEditingFeed(null);
+    setFormData({
+      name: '',
+      feed_url: '',
+      pub_date: '',
+      pub_thumb_image: '',
+      pub_content: '',
+      pub_media: ''
+    });
+    setDialogOpen(true);
   };
 
   if (!user) {
@@ -280,17 +302,22 @@ export default function RSSFeeds() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">RSS Feeds</h1>
-        <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setIsDialogOpen(true)}>
+            <Button onClick={handleAddFeedClick}>
               <Plus className="w-4 h-4 mr-2" />
               Add RSS Feed
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingFeed ? 'Edit RSS Feed' : 'Add RSS Feed'}</DialogTitle>
             </DialogHeader>
+            
+            {!editingFeed && (
+              <RSSFieldMapper onMappingGenerated={handleFieldMappingGenerated} />
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="name">Feed Name</Label>
@@ -311,41 +338,45 @@ export default function RSSFeeds() {
                   required
                 />
               </div>
-              <div>
-                <Label htmlFor="pub_date">Publication Date Field</Label>
-                <Input
-                  id="pub_date"
-                  value={formData.pub_date}
-                  onChange={(e) => setFormData({ ...formData, pub_date: e.target.value })}
-                  placeholder="e.g., pubDate"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="pub_date">Publication Date Field</Label>
+                  <Input
+                    id="pub_date"
+                    value={formData.pub_date}
+                    onChange={(e) => setFormData({ ...formData, pub_date: e.target.value })}
+                    placeholder="e.g., pubDate"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pub_thumb_image">Thumbnail Image Field</Label>
+                  <Input
+                    id="pub_thumb_image"
+                    value={formData.pub_thumb_image}
+                    onChange={(e) => setFormData({ ...formData, pub_thumb_image: e.target.value })}
+                    placeholder="e.g., media:thumbnail"
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="pub_thumb_image">Thumbnail Image Field</Label>
-                <Input
-                  id="pub_thumb_image"
-                  value={formData.pub_thumb_image}
-                  onChange={(e) => setFormData({ ...formData, pub_thumb_image: e.target.value })}
-                  placeholder="e.g., media:thumbnail"
-                />
-              </div>
-              <div>
-                <Label htmlFor="pub_content">Content Field</Label>
-                <Input
-                  id="pub_content"
-                  value={formData.pub_content}
-                  onChange={(e) => setFormData({ ...formData, pub_content: e.target.value })}
-                  placeholder="e.g., content:encoded"
-                />
-              </div>
-              <div>
-                <Label htmlFor="pub_media">Media Field</Label>
-                <Input
-                  id="pub_media"
-                  value={formData.pub_media}
-                  onChange={(e) => setFormData({ ...formData, pub_media: e.target.value })}
-                  placeholder="e.g., media:content"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="pub_content">Content Field</Label>
+                  <Input
+                    id="pub_content"
+                    value={formData.pub_content}
+                    onChange={(e) => setFormData({ ...formData, pub_content: e.target.value })}
+                    placeholder="e.g., content:encoded"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pub_media">Media Field</Label>
+                  <Input
+                    id="pub_media"
+                    value={formData.pub_media}
+                    onChange={(e) => setFormData({ ...formData, pub_media: e.target.value })}
+                    placeholder="e.g., media:content"
+                  />
+                </div>
               </div>
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>
