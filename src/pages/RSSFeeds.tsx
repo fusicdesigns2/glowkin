@@ -191,11 +191,14 @@ export default function RSSFeeds() {
         pubMedia: feed.pub_media
       };
 
+      // Get the current session to access the access token
+      const { data: { session } } = await supabase.auth.getSession();
+
       const response = await fetch('/supabase/functions/v1/rss-parser', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.auth.session()?.access_token}`
+          'Authorization': `Bearer ${session?.access_token}`
         },
         body: JSON.stringify({
           feedId: feed.id,

@@ -62,7 +62,7 @@ export default function RSSFeedData() {
           feed_details!inner(name, user_id)
         `)
         .eq('feed_details.user_id', user.id)
-        .order('pub_date', { ascending: false, nullsLast: true });
+        .order('pub_date', { ascending: false, nullsFirst: false });
 
       if (selectedFeedId !== 'all') {
         query = query.eq('feed_id', selectedFeedId);
