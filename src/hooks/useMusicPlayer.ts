@@ -92,7 +92,6 @@ export const useMusicPlayer = () => {
       setCurrentIndex(nextIndex)
       playTrack(nextTrack)
     } else {
-      // End of playlist
       setIsPlaying(false)
       setCurrentTime(0)
     }
@@ -119,6 +118,8 @@ export const useMusicPlayer = () => {
     isPlaying,
     currentTime,
     duration,
+    playlist,
+    currentIndex,
     playTrack,
     pauseTrack,
     resumeTrack,

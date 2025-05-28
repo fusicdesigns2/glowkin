@@ -9,11 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Loader2, Music, Search, Plus, Play, Clock, ChevronDown, Sparkles, ExternalLink, Eye } from 'lucide-react';
+import { Loader2, Music, Search, Plus, Play, Clock, ChevronDown, Sparkles, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { MusicPlayer } from '@/components/MusicPlayer';
+import { ExpandablePlaylistCard } from '@/components/ExpandablePlaylistCard';
 
 const SpotifyPlaylistManager = () => {
   const navigate = useNavigate();
@@ -375,16 +376,107 @@ const SpotifyPlaylistManager = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const sortedSelectedPlaylists = selectedPlaylists
-    .map(id => playlists.find(p => p.id === id))
-    .filter(Boolean)
-    .sort((a, b) => {
-      const aSongs = playlistSongs[a!.id] || [];
-      const bSongs = playlistSongs[b!.id] || [];
-      const aLastUpdated = aSongs.length > 0 ? new Date(aSongs[0].added_to_app_at).getTime() : 0;
-      const bLastUpdated = bSongs.length > 0 ? new Date(bSongs[0].added_to_app_at).getTime() : 0;
-      return bLastUpdated - aLastUpdated;
-    });
+  const reorderPlaylistSongs = async (playlistId: string, reorderedSongs: any[]) => {
+    try {
+      // Update the local state first for immediate feedback
+      setPlaylistSongs(prev => ({
+        ...prev,
+        [playlistId]: reorderedSongs
+      }));
+
+      // Update the order in the database by updating the added_to_app_at timestamps
+      for (let i = 0; i < reorderedSongs.length; i++) {
+        const song = reorderedSongs[i];
+        const newTimestamp = new Date(Date.now() - (reorderedSongs.length - i) * 1000).toISOString();
+        
+        await supabase
+          .from('playlist_songs')
+          .update({ added_to_app_at: newTimestamp })
+          .eq('user_id', user?.id)
+          .eq('spotify_playlist_id', playlistId)
+          .eq('spotify_track_id', song.spotify_track_id);
+      }
+      
+      toast.success('Song order updated');
+    } catch (error) {
+      console.error('Error reordering songs:', error);
+      toast.error('Failed to reorder songs');
+      // Reload to get the correct order back
+      await loadPlaylistSongs();
+    }
+  };
+
+  const copyPlaylist = async (sourcePlaylistId: string) => {
+    try {
+      const sourcePlaylist = playlists.find(p => p.id === sourcePlaylistId);
+      if (!sourcePlaylist) {
+        toast.error('Source playlist not found');
+        return;
+      }
+
+      const newPlaylistName = `${sourcePlaylist.name} (Copy)`;
+      
+      // Create new playlist on Spotify
+      const response = await fetch('https://api.spotify.com/v1/me/playlists', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${spotifyUser?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newPlaylistName,
+          description: `Copy of ${sourcePlaylist.name}`,
+          public: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create playlist on Spotify');
+      }
+
+      const newPlaylist = await response.json();
+
+      // Add to our database
+      await supabase
+        .from('spotify_playlists')
+        .insert({
+          user_id: user?.id,
+          spotify_playlist_id: newPlaylist.id,
+          playlist_name: newPlaylistName,
+          is_selected: true
+        });
+
+      // Copy songs from source playlist
+      const sourceSongs = playlistSongs[sourcePlaylistId] || [];
+      if (sourceSongs.length > 0) {
+        const songsToInsert = sourceSongs.map(song => ({
+          user_id: user?.id,
+          spotify_playlist_id: newPlaylist.id,
+          spotify_track_id: song.spotify_track_id,
+          track_name: song.track_name,
+          artist_name: song.artist_name,
+          album_name: song.album_name,
+          duration_ms: song.duration_ms,
+          search_year: song.search_year
+        }));
+
+        await supabase.from('playlist_songs').insert(songsToInsert);
+
+        // Add tracks to Spotify playlist
+        const trackIds = sourceSongs.map(song => song.spotify_track_id);
+        await updatePlaylist(newPlaylist.id, trackIds);
+      }
+
+      // Refresh playlists
+      await fetchPlaylists();
+      await loadPlaylistSongs();
+      
+      toast.success(`Playlist copied as "${newPlaylistName}"`);
+    } catch (error) {
+      console.error('Error copying playlist:', error);
+      toast.error('Failed to copy playlist');
+    }
+  };
 
   const getYearColor = (year: number) => {
     const colors = {
@@ -404,7 +496,7 @@ const SpotifyPlaylistManager = () => {
   };
 
   const handleViewPlaylist = async (playlistId: string) => {
-    // Get our internal playlist record
+    // Get our internal playlist record using spotify_playlist_id
     const { data: internalPlaylist } = await supabase
       .from('spotify_playlists')
       .select('id')
@@ -413,7 +505,7 @@ const SpotifyPlaylistManager = () => {
       .single();
 
     if (internalPlaylist) {
-      navigate(`/playlist-detail/${internalPlaylist.id}`);
+      navigate(`/playlist/${internalPlaylist.id}`);
     } else {
       toast.error('Playlist not found in database');
     }
@@ -660,7 +752,7 @@ const SpotifyPlaylistManager = () => {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-gray-100 italic text-center py-4 text-sm">
+                        <div className="text-gray-300 italic text-center py-4 text-sm">
                           No matches found
                         </div>
                       )}
@@ -744,74 +836,16 @@ const SpotifyPlaylistManager = () => {
                     if (!playlist) return null;
                     const songs = playlistSongs[playlist.id] || [];
                     return (
-                      <div
+                      <ExpandablePlaylistCard
                         key={playlist.id}
-                        className="border-2 border-dashed border-gray-200 rounded-lg p-3 transition-colors hover:border-blue-300"
-                        onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, playlist.id)}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold truncate">{playlist.name}</h4>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">
-                              {songs.length}/100
-                            </Badge>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleViewPlaylist(playlist.id)}
-                              title="View playlist details"
-                            >
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => window.open(`https://open.spotify.com/playlist/${playlist.id}`, '_blank')}
-                              title="Open in Spotify"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                        
-                        <div className="text-xs text-gray-500 mb-2">
-                          {songs.length > 0 && `Last updated: ${new Date(songs[0].added_to_app_at).toLocaleDateString()}`}
-                        </div>
-                        
-                        {songs.length > 0 ? (
-                          <div className="space-y-1 max-h-40 overflow-y-auto">
-                            {songs.slice(0, 5).map((song, index) => (
-                              <div key={song.id} className="text-xs flex items-center justify-between p-1 bg-gray-50 rounded">
-                                <div className="truncate">
-                                  <span className="font-medium">{song.track_name}</span>
-                                  <span className="text-gray-500"> • {song.artist_name}</span>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-4 w-4 p-0 text-gray-400 hover:text-red-500"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    removeSongFromPlaylist(song.spotify_track_id, playlist.id);
-                                  }}
-                                >
-                                  ✕
-                                </Button>
-                              </div>
-                            ))}
-                            {songs.length > 5 && (
-                              <div className="text-xs text-gray-500 text-center py-1">
-                                +{songs.length - 5} more songs
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-gray-500 italic text-center py-4 text-xs border-2 border-dashed border-gray-200 rounded bg-gray-50">
-                            Drop songs here or use the dropdown menu
-                          </div>
-                        )}
-                      </div>
+                        playlist={playlist}
+                        songs={songs}
+                        onViewPlaylist={handleViewPlaylist}
+                        onRemoveSong={removeSongFromPlaylist}
+                        onPlaySong={playTrack}
+                        onReorderSongs={reorderPlaylistSongs}
+                        onCopyPlaylist={copyPlaylist}
+                      />
                     );
                   })}
                 </div>
