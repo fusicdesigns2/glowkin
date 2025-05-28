@@ -22,6 +22,8 @@ import SocialMedia from "./pages/SocialMedia";
 import SpotifyPlaylistManager from "./pages/SpotifyPlaylistManager";
 import SpotifyCallback from "./pages/SpotifyCallback";
 import PlaylistDetail from "./pages/PlaylistDetail";
+import RSSFeeds from "./pages/RSSFeeds";
+import RSSFeedData from "./pages/RSSFeedData";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +49,8 @@ const App = () => (
               <Route path="/spotify-playlists" element={<SpotifyPlaylistManager />} />
               <Route path="/spotify-callback" element={<SpotifyCallback />} />
               <Route path="/playlist/:playlistId" element={<PlaylistDetail />} />
+              <Route path="/rss-feeds" element={<RSSFeeds />} />
+              <Route path="/rss-feed-data" element={<RSSFeedData />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ChatProvider>

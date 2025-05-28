@@ -1,16 +1,19 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Menu, FileText, Upload } from 'lucide-react';
+import { Menu, FileText, Upload, Rss } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Link } from 'react-router-dom';
+
 export default function Header() {
   const {
     user,
     profile,
     signOut
   } = useAuth();
+  
   return <header className="w-full py-4 px-6 bg-[#403E43] text-white border-b border-gray-200 flex justify-between items-center">
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" className="text-white" onClick={() => document.documentElement.classList.toggle('hide-sidebar')}>
@@ -68,6 +71,18 @@ export default function Header() {
                     <Link to="/pdf-list" className="flex items-center">
                       <FileText className="mr-2 h-4 w-4" />
                       My PDFs
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/rss-feeds" className="flex items-center">
+                      <Rss className="mr-2 h-4 w-4" />
+                      RSS Feeds
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/rss-feed-data" className="flex items-center">
+                      <Rss className="mr-2 h-4 w-4" />
+                      RSS Data
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>

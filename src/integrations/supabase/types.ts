@@ -320,6 +320,104 @@ export type Database = {
           },
         ]
       }
+      feed_data: {
+        Row: {
+          content: string | null
+          created_at: string
+          description: string | null
+          feed_id: string
+          guid: string | null
+          id: string
+          link: string | null
+          media_url: string | null
+          pub_date: string | null
+          raw_data: Json | null
+          thumb_image_url: string | null
+          title: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          description?: string | null
+          feed_id: string
+          guid?: string | null
+          id?: string
+          link?: string | null
+          media_url?: string | null
+          pub_date?: string | null
+          raw_data?: Json | null
+          thumb_image_url?: string | null
+          title?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          description?: string | null
+          feed_id?: string
+          guid?: string | null
+          id?: string
+          link?: string | null
+          media_url?: string | null
+          pub_date?: string | null
+          raw_data?: Json | null
+          thumb_image_url?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_data_feed_id_fkey"
+            columns: ["feed_id"]
+            isOneToOne: false
+            referencedRelation: "feed_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_details: {
+        Row: {
+          active: boolean
+          created_at: string
+          date_last_checked: string | null
+          feed_url: string
+          id: string
+          name: string
+          pub_content: string | null
+          pub_date: string | null
+          pub_media: string | null
+          pub_thumb_image: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          date_last_checked?: string | null
+          feed_url: string
+          id?: string
+          name: string
+          pub_content?: string | null
+          pub_date?: string | null
+          pub_media?: string | null
+          pub_thumb_image?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          date_last_checked?: string | null
+          feed_url?: string
+          id?: string
+          name?: string
+          pub_content?: string | null
+          pub_date?: string | null
+          pub_media?: string | null
+          pub_thumb_image?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       model_costs: {
         Row: {
           active: boolean
