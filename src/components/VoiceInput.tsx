@@ -342,7 +342,7 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
       <Button
         type="button"
         variant="ghost"
-        className={`relative p-0 h-16 w-16 rounded-full ${
+        className={`relative p-0 h-10 w-10 rounded-full ${
           isRecording 
             ? 'bg-red-500 animate-pulse' 
             : 'bg-amber-500 hover:bg-amber-600'
@@ -351,9 +351,9 @@ const VoiceInput = ({ onTranscription, disabled }: VoiceInputProps) => {
         disabled={disabled}
       >
         {isRecording ? (
-          <MicOff className="h-10 w-10 text-white" />
+          <MicOff className="h-5 w-5 text-white" />
         ) : (
-          <Mic className="h-10 w-10 text-white" />
+          <Mic className="h-5 w-5 text-white" />
         )}
       </Button>
       

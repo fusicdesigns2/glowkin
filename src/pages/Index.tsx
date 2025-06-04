@@ -29,7 +29,7 @@ export default function Index() {
       
       <main className="flex-grow flex">
         {user ? 
-          <div className="flex w-full h-[80vh] relative bg-[#403E43]">
+          <div className="flex w-full h-full relative bg-[#403E43]">
             {isPanelOpen && 
               <div className="bg-[#403E43] h-full">
                 <ThreadList />

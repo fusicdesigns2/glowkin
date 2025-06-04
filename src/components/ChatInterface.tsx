@@ -51,7 +51,10 @@ export default function ChatInterface() {
   }, [activeModels, setSelectedModel, selectedModelState]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const timer = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+    return () => clearTimeout(timer);
   }, [currentThread?.messages]);
 
   useEffect(() => {
@@ -341,19 +344,39 @@ export default function ChatInterface() {
 
       <div className="p-4 bg-[#403E43] border-t border-gray-700">
         <form onSubmit={handleSendMessage} className="flex flex-col space-y-2">
-          <div className="flex items-start gap-2">
-            <Textarea
-              placeholder="Ask your question... (Press Enter to send)"
-              value={message}
-              onChange={handleTextareaResize}
-              onKeyDown={handleKeyDown}
-              className={`min-h-[${textareaHeight}] resize-y bg-white text-black border-gray-700 focus:ring-white/20`}
-              style={{ height: textareaHeight, maxHeight: '300px' }}
-            />
-            <VoiceInput
-              onTranscription={handleVoiceInput}
-              disabled={isLoading}
-            />
+          <div className="flex items-end gap-2">
+            <div className="flex-grow relative">
+              <Textarea
+                placeholder="Ask your question... (Press Enter to send)"
+                value={message}
+                onChange={handleTextareaResize}
+                onKeyDown={handleKeyDown}
+                className={`min-h-[${textareaHeight}] resize-y bg-white text-black border-gray-700 focus:ring-white/20 pr-20`}
+                style={{ height: textareaHeight, maxHeight: '300px' }}
+              />
+              <div className="absolute bottom-2 right-2">
+                <VoiceInput
+                  onTranscription={handleVoiceInput}
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+            <Select
+              value={selectedModelState}
+              onValueChange={handleModelChange}
+              disabled={isLoadingModels}
+            >
+              <SelectTrigger className="w-[250px] bg-white text-black border-gray-700">
+                <SelectValue placeholder="Select model" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeModels?.map((model) => (
+                  <SelectItem key={model.model} value={model.model}>
+                    {model.model}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="flex justify-between items-center">
@@ -377,23 +400,6 @@ export default function ChatInterface() {
             </div>
             
             <div className="flex items-center gap-2">
-              <Select
-                value={selectedModelState}
-                onValueChange={handleModelChange}
-                disabled={isLoadingModels}
-              >
-                <SelectTrigger className="w-[350px] bg-white text-black border-gray-700">
-                  <SelectValue placeholder="Select model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeModels?.map((model) => (
-                    <SelectItem key={model.model} value={model.model}>
-                      {model.model}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
               <Button 
                 type="submit" 
                 className="bg-maiRed hover:bg-red-600"
